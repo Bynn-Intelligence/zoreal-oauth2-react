@@ -1,10 +1,8 @@
 /**
  * The public types of @zoreal/oauth2-react.
  *
- * The authority for every shape here is zoreal/products/oauth2/05-react-sdk.md,
- * and the mapping to @react-oauth/google is one to one so a team already
- * integrated with Google ports by renaming. Where this file and that document
- * disagree, the document wins and this file has a bug.
+ * The API mirrors @react-oauth/google one to one, renamed, so a team already
+ * integrated with Google ports by renaming their imports.
  */
 
 export type ErrorCode =
@@ -27,9 +25,9 @@ export type NonOAuthError = {
   type:
     | 'popup_failed_to_open'
     | 'popup_closed'
-    | 'request_expired' // the pairing TTL elapsed, 02 section 1
+    | 'request_expired' // the pairing request timed out before approval
     | 'request_denied' // the holder declined in the app
-    | 'enrolment_abandoned' // 02 section 4
+    | 'enrolment_abandoned' // the user started enrolling and did not finish
     | 'platform_unsupported' // iOS, until ZOREAL ID ships there
     | 'unknown';
   /** The provider's own reason string. Render it. Never substitute a friendlier guess. */
@@ -39,19 +37,19 @@ export type NonOAuthError = {
 /** How the holder reached this login. Analogous to Google's select_by. */
 export type SelectBy = 'qr' | 'app_link' | 'device' | 'session';
 
-/** 02 section 5. Describes what happened, never what was requested. */
+/** How the login was actually authenticated. Describes what happened, never what was requested. */
 export type AcrValue = 'zoreal.live' | 'zoreal.device' | 'zoreal.session';
 
 export interface PairingState {
   status: 'pending' | 'claimed' | 'approved' | 'denied' | 'expired' | 'enrolling';
   /** Present while status is 'pending'. Seconds. */
   expiresIn?: number;
-  /** Present while status is 'enrolling'. 02 section 4 extends the window to 30 minutes. */
+  /** Present while status is 'enrolling'. Enrolment extends the window well beyond a normal login. */
   enrolmentDeadline?: number;
 }
 
 export interface ZorealLoginRequestOptions {
-  /** Defaults to 'openid'. 03 section 2. Tier B scopes require flow: 'auth-code'. */
+  /** Defaults to 'openid'. Scopes that return personal data require flow: 'auth-code'. */
   scope?: string;
   /** Ask for a specific assurance. Omit to accept the default, zoreal.device. */
   acr_values?: AcrValue | AcrValue[];
@@ -62,7 +60,6 @@ export interface ZorealLoginRequestOptions {
   app_state?: string;
   /**
    * 'auto' renders a QR on desktop and an app link on mobile, which is what you want.
-   * 02 sections 2 and 3.
    */
   display?: 'auto' | 'qr' | 'link';
   /** Called on each pairing state change. Drive your own UI from this if you render one. */
@@ -74,9 +71,8 @@ export interface ZorealButtonConfiguration {
   theme?: 'outline' | 'filled' | 'filled_black';
   size?: 'large' | 'medium' | 'small';
   /**
-   * All four are neutral, by decision. 01 section 5: the button asserts nothing about a
-   * person who has not yet authenticated. There is no 'verified_human' variant and there
-   * will not be one.
+   * All four are neutral. The button asserts nothing about a person who has not yet
+   * authenticated; there is no 'verified_human' variant.
    */
   text?: 'continue_with' | 'signin_with' | 'signup_with' | 'signin';
   shape?: 'rectangular' | 'pill' | 'square';
@@ -101,9 +97,9 @@ export interface ZorealCodeResponse {
   /**
    * The PKCE verifier for this code. Post it to your backend with the code;
    * the backend sends both to /token along with its client authentication.
-   * Added 2026-08-26: PKCE is mandatory for every client (docs/14 section 3),
-   * and the verifier is generated here, so your server can only present it if
-   * this hands it over. It travels to YOUR backend over TLS and nowhere else.
+   * PKCE is mandatory for every client, and the verifier is generated here, so
+   * your server can only complete the exchange if this hands it over. It travels
+   * to YOUR backend over TLS and nowhere else.
    */
   code_verifier: string;
 }
@@ -118,7 +114,7 @@ export interface AuthCodeFlowOptions extends ZorealLoginRequestOptions {
   onSuccess?: (response: ZorealCodeResponse) => void;
   onError?: (error: Pick<NonOAuthError, 'description'> & { error: ErrorCode }) => void;
   onNonOAuthError?: (error: NonOAuthError) => void;
-  /** Must be registered. 04 section 1. */
+  /** Must be registered for this client in the ZOREAL dashboard. */
   redirect_uri?: string;
   ux_mode?: 'popup' | 'redirect';
 }

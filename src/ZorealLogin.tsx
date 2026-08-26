@@ -3,14 +3,12 @@ import { useZorealFlow, type ActivePairing } from './useZorealLogin';
 import type { NonOAuthError, ZorealLoginProps } from './types';
 
 /**
- * The drop-in button, browser-direct and therefore Tier A only (03 section 1:
- * it receives no access token, so there is nothing for a personal-data claim
- * to arrive on).
+ * The drop-in button. It receives no access token, so it returns the
+ * pseudonymous identity only; personal data needs the auth-code flow.
  *
- * The copy is neutral by decision (01 section 5): the button asserts nothing
- * about a person who has not yet authenticated. Styling is inline and
- * self-contained; no stylesheet, no font, no external asset, because this
- * renders on the most attacked page the integrator owns (01 section 4).
+ * The copy is neutral: the button asserts nothing about a person who has not
+ * yet authenticated. Styling is inline and self-contained; no stylesheet, no
+ * font, no external asset, because this renders on a sign-in page.
  */
 
 const TEXTS: Record<NonNullable<ZorealLoginProps['text']>, string> = {

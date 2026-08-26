@@ -3,7 +3,7 @@
  * it, LOCAL ONLY: it does not end the holder's ZOREAL session, which lives on
  * their phone and at the provider. A relying party that believes this signs
  * the user out of ZOREAL has a security misunderstanding, not a naming
- * complaint (05 section 8). The relying party's own session is the relying
+ * complaint. The relying party's own session is the relying
  * party's to end.
  *
  * The SDK deliberately persists nothing (no localStorage, no cookies), so

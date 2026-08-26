@@ -1,8 +1,7 @@
 # Publishes @zoreal/oauth2-react to npm.
 #
-# DELIBERATELY NOT TRIGGERED BY A TAG. The supply-chain posture in
-# zoreal/products/oauth2/06 section 2 requires that no release publishes from
-# CI on a tag alone: this runs only when a GitHub Release is published by a
+# DELIBERATELY NOT TRIGGERED BY A TAG. No release publishes from CI on a tag
+# alone: this runs only when a GitHub Release is published by a
 # human, or on a manual dispatch, and it runs inside the `npm-publish`
 # environment so required reviewers can be enforced in repo settings
 # (Settings > Environments > npm-publish > required reviewers).

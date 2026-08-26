@@ -1,6 +1,6 @@
 import type { ZorealCodeResponse } from './types';
 
-/** Mirrors hasGrantedAllScopesGoogle: name-for-name portability (05 section 1). */
+/** Mirrors hasGrantedAllScopesGoogle for name-for-name portability. */
 export function hasGrantedAllScopesZoreal(
   response: Pick<ZorealCodeResponse, 'scope'>,
   firstScope: string,

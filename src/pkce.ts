@@ -1,6 +1,5 @@
 /**
- * PKCE, S256 only, per docs/14 section 3: mandatory for every client,
- * confidential ones included. There is no plain fallback and there must never
+ * PKCE, S256 only: mandatory for every client, confidential ones included. There is no plain fallback and there must never
  * be one; a provider seeing method=plain is seeing a bug or an attack.
  */
 

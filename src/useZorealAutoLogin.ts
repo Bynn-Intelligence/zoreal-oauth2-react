@@ -9,11 +9,9 @@ import type { UseZorealAutoLoginOptions } from './types';
  * session, the resulting acr is zoreal.session with an empty amr, and a
  * relying party that needs a live human must not build on this hook.
  *
- * PRIVACY STATUS, stated because the spec leaves it open (06 section 7, O5):
- * mounting this on a page sends a request to ZOREAL on page load, before the
- * user does anything. Until that question is decided, `disabled` defaults are
- * conservative: the hook fires once per mount, never retries, and does nothing
- * at all when `disabled` is true.
+ * PRIVACY NOTE: mounting this on a page sends a request to ZOREAL on page
+ * load, before the user does anything. The hook is therefore conservative: it
+ * fires once per mount, never retries, and does nothing when `disabled`.
  */
 export function useZorealAutoLogin(options: UseZorealAutoLoginOptions): void {
   const { login } = useZorealFlow({

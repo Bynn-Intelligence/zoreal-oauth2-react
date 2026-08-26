@@ -3,9 +3,7 @@
 Login with ZOREAL for React: a chip-verified human behind every sign-in.
 
 The API mirrors `@react-oauth/google` one to one, renamed, so a team already
-integrated with Google ports by find and replace. The full mapping and every
-design decision live in the specification this package is built against:
-`zoreal/products/oauth2/05-react-sdk.md` in the specification repo.
+integrated with Google ports by find and replace.
 
 ## Status
 
@@ -17,7 +15,40 @@ production today, and this section is removed the day that changes.
 
 Not yet published. When it is: `npm install @zoreal/oauth2-react`.
 
-## Quick start: the button (no backend needed)
+## Two flows: pick by whether you need the user's details
+
+- **You have a backend and want the user's email or name** (most apps): use the
+  **auth-code flow**. Your backend gets the email, name, and verification
+  details from `/userinfo`. Start here.
+- **You have no backend and only need to know "this is a verified, unique human,
+  and the same one as last time"**: use the **`<ZorealLogin>` button**. It
+  returns a stable per-user identifier and proof of verification, but no email
+  or name. Email and other personal details are never placed in a browser-side
+  token; that is what the auth-code flow and your backend are for.
+
+## Quick start: auth-code (email and name, needs your backend)
+
+```tsx
+import { useZorealLogin } from '@zoreal/oauth2-react';
+
+// `email` (and profile.name, etc.) are returned from /userinfo on your backend.
+const login = useZorealLogin({
+  flow: 'auth-code',
+  scope: 'openid email profile.name',
+  onSuccess: async ({ code, code_verifier }) => {
+    // Send BOTH to your backend over TLS. Your backend calls POST /token with
+    // them plus its client authentication, then reads the email and name from
+    // /userinfo. That is where personal data is delivered.
+    const session = await fetch('/api/auth/zoreal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, code_verifier }),
+    });
+  },
+});
+```
+
+## Quick start: the button (no backend, pseudonymous)
 
 ```tsx
 import { ZorealOAuthProvider, ZorealLogin } from '@zoreal/oauth2-react';
@@ -25,9 +56,10 @@ import { ZorealOAuthProvider, ZorealLogin } from '@zoreal/oauth2-react';
 <ZorealOAuthProvider clientId="ast_your_asset_id">
   <ZorealLogin
     onSuccess={({ credential }) => {
-      // credential is an ID token: a pairwise pseudonymous `sub` plus
-      // assurance claims. Verify it server-side against the JWKS before
-      // trusting it. It NEVER contains personal data, by construction.
+      // `credential` is an ID token carrying a stable per-user identifier (`sub`)
+      // and proof the person is a verified, unique human. No email, no name:
+      // use the auth-code flow above for those. Verify it on your server against
+      // the JWKS before trusting it.
     }}
     onError={(e) => console.warn(e.type, e.description)}
   />
@@ -38,7 +70,7 @@ On desktop the button shows a QR; the user scans it with their phone and
 approves in the ZOREAL ID app. On a phone it opens the app directly. Either
 way your page just receives `onSuccess`.
 
-## Quick start: auth-code (personal data, requires your backend)
+## More on the auth-code flow
 
 ```tsx
 import { useZorealLogin } from '@zoreal/oauth2-react';

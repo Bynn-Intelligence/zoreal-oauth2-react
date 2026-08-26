@@ -1,11 +1,10 @@
 /**
- * The pairing channel, client side. 02 section 1 is the authority for the
- * object; wire.ts pins the endpoints.
+ * The pairing channel, client side. wire.ts pins the endpoints.
  *
  * The browser polls; the phone never talks to the browser. Everything here is
  * therefore plain fetch against the issuer, CORS-gated on the client's
  * authorized origins, with the poll cadence fixed: the provider cancels an
- * over-polling request rather than throttling it (02 section 1), so a "retry
+ * over-polling request rather than throttling it, so a "retry
  * faster on error" strategy here would kill the login it is trying to save.
  */
 
@@ -73,9 +72,9 @@ export async function startPairing(
 
   const body = await parseJson(response);
   if (!response.ok) {
-    // The provider's words, verbatim. 06 section 2: a refused package version
-    // arrives here, and rewriting its reason would disable the one remediation
-    // path that does not depend on integrators upgrading.
+    // The provider's words, verbatim. A refused package version arrives here,
+    // and rewriting its reason would hide the only signal telling an integrator
+    // to upgrade.
     throw new OAuthFlowError(
       (body.error as ErrorCode) ?? 'server_error',
       (body.error_description as string) ?? `The provider refused the request (${response.status})`
@@ -145,9 +144,9 @@ export async function pollUntilApproved(
 /**
  * The code exchange, browser-direct mode only: a public client, PKCE and no
  * secret. What comes back can only ever be the pseudonymous tier, by
- * construction rather than by rule (03 section 1): personal data lives at
- * /userinfo behind an access token this mode is never issued for Tier B
- * scopes, because those are refused for public clients at the pairing step.
+ * construction rather than by rule: personal data lives at /userinfo behind an
+ * access token this mode is never issued, because personal-data scopes are
+ * refused for public clients at the pairing step.
  */
 export async function exchangeCode(
   issuer: string,
@@ -174,7 +173,7 @@ export async function exchangeCode(
   return body;
 }
 
-/** 02 section 3: a mobile user agent gets the app link, not a QR of its own screen. */
+/** A mobile user agent gets the app link, not a QR of its own screen. */
 export function isMobileUserAgent(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /android|iphone|ipad|ipod/i.test(navigator.userAgent);
