@@ -1,6 +1,6 @@
 # @zoreal/oauth2-react
 
-Login with ZOREAL for React: a chip-verified human behind every sign-in.
+Login with ZOREAL for React: a ZOREAL Verified Proof-of-Human behind every sign-in.
 
 The API mirrors `@react-oauth/google` one to one, renamed, so a team already
 integrated with Google ports by find and replace.
