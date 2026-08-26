@@ -1,20 +1,21 @@
-# Publishes @zoreal/oauth2-react to npm.
+# Publishes @zoreal/oauth2-react to npm when the version in package.json changes.
 #
-# DELIBERATELY NOT TRIGGERED BY A TAG. No release publishes from CI on a tag
-# alone: this runs only when a GitHub Release is published by a
-# human, or on a manual dispatch, and it runs inside the `npm-publish`
-# environment so required reviewers can be enforced in repo settings
-# (Settings > Environments > npm-publish > required reviewers).
+# Push to main with a bumped `version` and it publishes; a push that does not
+# change the version is a green no-op, so ordinary commits never republish.
+# A published GitHub Release and a manual dispatch also work, for an explicit
+# out-of-band publish.
 #
-# Provenance: `--provenance` makes npm record and display which commit and
-# workflow built the package, which is the attestation the same spec section
-# requires. It needs the id-token permission below.
+# The npm-publish environment is kept because npm trusted publishing binds its
+# OIDC trust to (repository, workflow, environment). Add a required reviewer to
+# that environment for one-click approval before each publish, or leave it with
+# no reviewer for fully hands-off publishing on version bump.
 #
-# Auth: set NPM_TOKEN (an npm automation token for the @zoreal scope) as a
-# secret on the npm-publish environment.
+# Provenance records which commit and workflow built the package.
 name: Publish to npm
 
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -33,22 +34,38 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
-      # npm >= 11.5 is what supports OIDC trusted publishing; Node 22 bundles
-      # npm 10. With NPM_TOKEN set this is harmless; without it, npm uses the
-      # trusted publisher configured on npmjs.com for this repo and workflow.
-      - run: npm install -g npm@latest
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      # Refuses a version that is already on the registry, so a re-run of a
-      # release cannot silently overwrite bytes someone already installed.
-      - run: |
+
+      # Publish only when this exact version is not already on the registry.
+      # A push that did not bump the version sets publish=false and the job
+      # ends green without touching npm. A Release or manual dispatch of an
+      # already-published version is an explicit mistake, so it fails loudly.
+      - id: guard
+        run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
           if npm view "@zoreal/oauth2-react@${PKG_VERSION}" version >/dev/null 2>&1; then
-            echo "@zoreal/oauth2-react@${PKG_VERSION} already published; bump the version first." >&2
-            exit 1
+            if [ "${{ github.event_name }}" = "push" ]; then
+              echo "@zoreal/oauth2-react@${PKG_VERSION} already published; nothing to do."
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "@zoreal/oauth2-react@${PKG_VERSION} already published; bump the version first." >&2
+              exit 1
+            fi
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
-      - run: npm publish --provenance --access public
+
+      - if: steps.guard.outputs.publish == 'true'
+        run: npm install -g npm@latest
+      - if: steps.guard.outputs.publish == 'true'
+        run: npm ci
+      - if: steps.guard.outputs.publish == 'true'
+        run: npm run typecheck
+      - if: steps.guard.outputs.publish == 'true'
+        run: npm test
+      - if: steps.guard.outputs.publish == 'true'
+        run: npm run build
+      - if: steps.guard.outputs.publish == 'true'
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
