@@ -7,13 +7,18 @@ integrated with Google ports by find and replace.
 
 ## Status
 
-The package is real; the provider it speaks to is being built. This code pins
-wire protocol v1 and is not yet published to npm. Nothing below works against
-production today, and this section is removed the day that changes.
+Early release. The package implements wire protocol v1. The hosted ZOREAL
+login service is still rolling out, so treat this as a preview: the API is
+stable, but end-to-end sign-in against production is not available everywhere
+yet. This note is removed once the service is generally available.
 
 ## Install
 
-Not yet published. When it is: `npm install @zoreal/oauth2-react`.
+```sh
+npm install @zoreal/oauth2-react
+```
+
+`react` and `react-dom` (18 or 19) are peer dependencies.
 
 ## Two flows: pick by whether you need the user's details
 
@@ -70,18 +75,65 @@ On desktop the button shows a QR; the user scans it with their phone and
 approves in the ZOREAL ID app. On a phone it opens the app directly. Either
 way your page just receives `onSuccess`.
 
-## More on the auth-code flow
+### On your backend
+
+Exchange the `code` and `code_verifier` your `onSuccess` posted, then read the
+user's details:
+
+```
+POST https://id.zoreal.com/token
+  grant_type=authorization_code
+  code=<code>
+  code_verifier=<code_verifier>
+  client_id=ast_your_asset_id
+  <your client authentication>     # client secret, or a private_key_jwt assertion
+
+-> { "id_token": "...", "access_token": "...", "expires_in": 600 }
+
+GET https://id.zoreal.com/userinfo
+  Authorization: Bearer <access_token>
+
+-> { "sub": "...", "email": "...", "email_verified": true, "given_name": "...", ... }
+```
+
+Which fields come back depends on the scopes the user consented to. The
+`id_token` is a JWT you verify against the JWKS at
+`https://id.zoreal.com/jwks`.
+
+`ux_mode: 'redirect'` is not supported in v1: it would put the PKCE verifier
+in a URL, which is a credential in every access log on the path.
+
+## Scopes
+
+Request scopes in the `scope` string, space-separated, always starting with
+`openid`. What each returns and where:
+
+| Scope | Returns | Delivered in | Needs |
+|---|---|---|---|
+| `openid` | `sub` (stable per-user id) and a verification summary: uniqueness, month verified, whether a chip was read live | ID token | nothing |
+| `zoreal.age` | `age_over_N` booleans for the thresholds you registered, e.g. `age_over_18`. Never an age or birthdate | ID token | nothing |
+| `zoreal.nationality` | `nationality` (ISO 3166-1 alpha-3) | ID token | nothing |
+| `email` | `email`, `email_verified` | `/userinfo` | verified domain, confidential client |
+| `profile.name` | `name`, `given_name`, `family_name` | `/userinfo` | verified domain, confidential client |
+| `profile.birthdate` | `birthdate` (full date) | `/userinfo` | verified domain, confidential client |
+| `profile.document` | `document_type`, `document_number`, `issuing_country`, `document_expires_on` | `/userinfo` | verified domain, confidential client |
+| `profile.portrait` | `portrait`, the photo from the document chip. Biometric data: requesting it makes you responsible for it under GDPR Article 9 and similar laws | `/userinfo` | verified domain, confidential client |
+
+The first three are available to any client and ride in the ID token, so the
+no-backend button can use them. Everything else is personal data: it is served
+only from `/userinfo` to a confidential client whose domain you have verified in
+the dashboard, and never placed in a browser-side token.
+
+### Identity verification (KYC)
+
+To receive a person's government-document-verified identity, request the
+document scopes together and read them from `/userinfo`:
 
 ```tsx
-import { useZorealLogin } from '@zoreal/oauth2-react';
-
 const login = useZorealLogin({
   flow: 'auth-code',
-  scope: 'openid profile.name',
+  scope: 'openid profile.name profile.birthdate profile.document profile.portrait',
   onSuccess: async ({ code, code_verifier }) => {
-    // Send BOTH to your backend over TLS. Your backend calls POST /token
-    // with them plus its client authentication (private_key_jwt, mTLS, or
-    // client secret), then reads personal claims from /userinfo.
     await fetch('/api/auth/zoreal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,8 +143,12 @@ const login = useZorealLogin({
 });
 ```
 
-`ux_mode: 'redirect'` is not supported in v1: it would put the PKCE verifier
-in a URL, which is a credential in every access log on the path.
+Your backend then holds the name, date of birth, document type and number,
+issuing country and expiry, all read from a chip and verified at enrolment,
+plus the portrait if you requested it. That is the raw material for a KYC
+check. You remain the controller of that data and responsible for how you
+store, use, and justify collecting it; ZOREAL provides the verified attributes,
+not a regulatory determination.
 
 ## What your page needs to allow
 
