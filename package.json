@@ -1,6 +1,6 @@
 {
   "name": "@zoreal/oauth2-react",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Login with ZOREAL for React. A ZOREAL Verified Proof-of-Human behind every sign-in.",
   "license": "MIT",
   "repository": {
@@ -8,7 +8,15 @@
     "url": "git+https://github.com/Bynn-Intelligence/zoreal-oauth2-react.git"
   },
   "homepage": "https://zoreal.com",
-  "keywords": ["zoreal", "oauth2", "oidc", "react", "login", "identity", "liveness"],
+  "keywords": [
+    "zoreal",
+    "oauth2",
+    "oidc",
+    "react",
+    "login",
+    "identity",
+    "liveness"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -20,7 +28,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
