@@ -110,14 +110,14 @@ Request scopes in the `scope` string, space-separated, always starting with
 
 | Scope | Returns | Delivered in | Needs |
 |---|---|---|---|
-| `openid` | `sub` (stable per-user id) and a verification summary: uniqueness, month verified, whether a chip was read live | ID token | nothing |
+| `openid` | `sub` (stable per-user id) and a proof-of-human summary: that this is a live, real, unique person verified by ZOREAL, when they were verified, and how strongly | ID token | nothing |
 | `zoreal.age` | `age_over_N` booleans for the thresholds you registered, e.g. `age_over_18`. Never an age or birthdate | ID token | nothing |
 | `zoreal.nationality` | `nationality` (ISO 3166-1 alpha-3) | ID token | nothing |
 | `email` | `email`, `email_verified` | `/userinfo` | verified domain, confidential client |
 | `profile.name` | `name`, `given_name`, `family_name` | `/userinfo` | verified domain, confidential client |
 | `profile.birthdate` | `birthdate` (full date) | `/userinfo` | verified domain, confidential client |
 | `profile.document` | `document_type`, `document_number`, `issuing_country`, `document_expires_on` | `/userinfo` | verified domain, confidential client |
-| `profile.portrait` | `portrait`, the photo from the document chip. Biometric data: requesting it makes you responsible for it under GDPR Article 9 and similar laws | `/userinfo` | verified domain, confidential client |
+| `profile.portrait` | `portrait`, the person's verified identity photo. Biometric data: requesting it makes you responsible for it under GDPR Article 9 and similar laws | `/userinfo` | verified domain, confidential client |
 
 The first three are available to any client and ride in the ID token, so the
 no-backend button can use them. Everything else is personal data: it is served
@@ -144,9 +144,9 @@ const login = useZorealLogin({
 ```
 
 Your backend then holds the name, date of birth, document type and number,
-issuing country and expiry, all read from a chip and verified at enrolment,
-plus the portrait if you requested it. That is the raw material for a KYC
-check. You remain the controller of that data and responsible for how you
+issuing country and expiry, all verified at enrolment against a genuine
+government identity document by a live person, plus the portrait if you
+requested it. That is the raw material for a KYC check. You remain the controller of that data and responsible for how you
 store, use, and justify collecting it; ZOREAL provides the verified attributes,
 not a regulatory determination.
 
