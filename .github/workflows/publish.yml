@@ -34,6 +34,10 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+      # npm >= 11.5 is what supports OIDC trusted publishing; Node 22 bundles
+      # npm 10. With NPM_TOKEN set this is harmless; without it, npm uses the
+      # trusted publisher configured on npmjs.com for this repo and workflow.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
