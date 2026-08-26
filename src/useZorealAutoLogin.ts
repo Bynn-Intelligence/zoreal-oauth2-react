@@ -22,8 +22,10 @@ export function useZorealAutoLogin(options: UseZorealAutoLoginOptions): void {
     prompt: 'none',
     onCredential: options.onSuccess,
     onError: (e) => {
-      // login_required and friends are the expected quiet outcome, not an error.
-      if (e.error === 'access_denied' || e.error === 'invalid_request') {
+      // The provider's honest answer when no silent session exists (the
+      // common case): unavailable, not an error, and never surfaced.
+      const quiet = ['login_required', 'consent_required', 'interaction_required'];
+      if (quiet.includes(e.error)) {
         options.onUnavailable?.();
       } else {
         options.onError?.({ type: 'unknown', description: e.description ?? e.error });

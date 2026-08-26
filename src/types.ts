@@ -14,7 +14,13 @@ export type ErrorCode =
   | 'unsupported_response_type'
   | 'invalid_scope'
   | 'server_error'
-  | 'temporarily_unavailable';
+  | 'temporarily_unavailable'
+  // The OIDC interaction errors. prompt=none answers with these when no
+  // silent session exists, which is the expected quiet outcome for
+  // useZorealAutoLogin, not a failure.
+  | 'login_required'
+  | 'consent_required'
+  | 'interaction_required';
 
 /** Failures that are not OAuth errors, because the flow never reached the provider. */
 export type NonOAuthError = {
