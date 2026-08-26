@@ -1,71 +1,73 @@
-# Publishes @zoreal/oauth2-react to npm when the version in package.json changes.
+# Auto-release @zoreal/oauth2-react on every push to main.
 #
-# Push to main with a bumped `version` and it publishes; a push that does not
-# change the version is a green no-op, so ordinary commits never republish.
-# A published GitHub Release and a manual dispatch also work, for an explicit
-# out-of-band publish.
+# Each push cuts the next patch: the workflow bumps the version, keeps the
+# in-code SDK_VERSION in step, runs the checks, publishes to npm with
+# provenance, and pushes the bump commit and tag back to main. The push back
+# uses the default GITHUB_TOKEN, which by design does not retrigger this
+# workflow, and the bump commit is tagged [skip publish] as a second guard.
 #
-# The npm-publish environment is kept because npm trusted publishing binds its
-# OIDC trust to (repository, workflow, environment). Add a required reviewer to
-# that environment for one-click approval before each publish, or leave it with
-# no reviewer for fully hands-off publishing on version bump.
+# To ship without cutting a release (docs, CI tweaks), put [skip publish] in
+# the commit message.
 #
-# Provenance records which commit and workflow built the package.
+# The npm-publish environment is kept so npm trusted publishing can bind its
+# OIDC trust to it. Leave that environment with no required reviewer for
+# hands-off publishing.
 name: Publish to npm
 
 on:
   push:
     branches: [main]
-  release:
-    types: [published]
   workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 jobs:
   publish:
+    if: "!contains(github.event.head_commit.message, '[skip publish]')"
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
 
-      # Publish only when this exact version is not already on the registry.
-      # A push that did not bump the version sets publish=false and the job
-      # ends green without touching npm. A Release or manual dispatch of an
-      # already-published version is an explicit mistake, so it fails loudly.
-      - id: guard
-        run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          echo "version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
-          if npm view "@zoreal/oauth2-react@${PKG_VERSION}" version >/dev/null 2>&1; then
-            if [ "${{ github.event_name }}" = "push" ]; then
-              echo "@zoreal/oauth2-react@${PKG_VERSION} already published; nothing to do."
-              echo "publish=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "@zoreal/oauth2-react@${PKG_VERSION} already published; bump the version first." >&2
-              exit 1
-            fi
-          else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
+      # npm >= 11.5 for OIDC trusted publishing; harmless with a classic token.
+      - run: npm install -g npm@latest
+      - run: npm ci
 
-      - if: steps.guard.outputs.publish == 'true'
-        run: npm install -g npm@latest
-      - if: steps.guard.outputs.publish == 'true'
-        run: npm ci
-      - if: steps.guard.outputs.publish == 'true'
-        run: npm run typecheck
-      - if: steps.guard.outputs.publish == 'true'
-        run: npm test
-      - if: steps.guard.outputs.publish == 'true'
-        run: npm run build
-      - if: steps.guard.outputs.publish == 'true'
-        run: npm publish --provenance --access public
+      # Bump the patch version and keep the wire SDK_VERSION identical, so the
+      # string the client sends on every request always matches the package.
+      - id: bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          NEW=$(npm version patch --no-git-tag-version)
+          NEW=${NEW#v}
+          sed -i "s/export const SDK_VERSION = '[^']*';/export const SDK_VERSION = '${NEW}';/" src/wire.ts
+          echo "version=${NEW}" >> "$GITHUB_OUTPUT"
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      # Record the release on main before publishing, so a published version is
+      # always represented by a commit and tag. The tag carries [skip publish].
+      - run: |
+          git add package.json package-lock.json src/wire.ts
+          git commit -m "Release v${{ steps.bump.outputs.version }} [skip publish]"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main --follow-tags
+
+      - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
