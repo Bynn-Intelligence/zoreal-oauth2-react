@@ -1,0 +1,51 @@
+# Publishes @zoreal/oauth2-react to npm.
+#
+# DELIBERATELY NOT TRIGGERED BY A TAG. The supply-chain posture in
+# zoreal/products/oauth2/06 section 2 requires that no release publishes from
+# CI on a tag alone: this runs only when a GitHub Release is published by a
+# human, or on a manual dispatch, and it runs inside the `npm-publish`
+# environment so required reviewers can be enforced in repo settings
+# (Settings > Environments > npm-publish > required reviewers).
+#
+# Provenance: `--provenance` makes npm record and display which commit and
+# workflow built the package, which is the attestation the same spec section
+# requires. It needs the id-token permission below.
+#
+# Auth: set NPM_TOKEN (an npm automation token for the @zoreal scope) as a
+# secret on the npm-publish environment.
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # Refuses a version that is already on the registry, so a re-run of a
+      # release cannot silently overwrite bytes someone already installed.
+      - run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if npm view "@zoreal/oauth2-react@${PKG_VERSION}" version >/dev/null 2>&1; then
+            echo "@zoreal/oauth2-react@${PKG_VERSION} already published; bump the version first." >&2
+            exit 1
+          fi
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
