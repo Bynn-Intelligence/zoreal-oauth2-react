@@ -125,13 +125,6 @@ pairing modal on screen; on a phone it skips the QR and opens the ZOREAL ID
 app instead. See [The pairing modal](#the-pairing-modal) for what it does and
 how to theme, translate, time out or replace it.
 
-> **Upgrading from 0.1.x?** Nothing breaks, but you can delete code. If you
-> rendered your own panel from `onPairingStateChange`, that panel and the
-> `useState` behind it are now redundant — remove them and the SDK's modal
-> takes over. To keep yours instead, set `pairingUI="none"` on the provider and
-> nothing changes. `<ZorealLogin>` no longer draws its own inline QR panel; it
-> uses the same modal.
-
 ## Quick start: the button (no backend, pseudonymous)
 
 ```tsx
