@@ -622,6 +622,17 @@ runtime dependencies. Two things touch the network, both on the ZOREAL origin:
   no "verified human" button text and there will not be one. The assertion
   lives in the token, where it is verifiable.
 
+## Verifying this release
+
+Every version is published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements): the package page on npmjs.com carries a **Provenance** panel linking the exact commit and workflow run that built the tarball, signed through [Sigstore](https://www.sigstore.dev/) and recorded in its public transparency log. No long-lived npm token stands behind it — the workflow authenticates by OIDC ([trusted publishing](https://docs.npmjs.com/trusted-publishers)), so a leaked CI secret cannot cut a release.
+
+Check the signatures on what you actually installed:
+
+```sh
+npm install @zoreal/oauth2-react
+npm audit signatures
+```
+
 ## The ZOREAL OAuth2 library family
 
 | Repository | Package | Role |

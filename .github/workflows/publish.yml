@@ -68,9 +68,10 @@ jobs:
           git tag "v${{ steps.bump.outputs.version }}"
           git push origin HEAD:main "v${{ steps.bump.outputs.version }}"
 
+      # OIDC trusted publishing: npm (>= 11.5) exchanges the workflow id-token
+      # for a short-lived, scoped credential, so no NPM_TOKEN is stored. The
+      # same step mints the Sigstore provenance shown on npmjs.com.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - run: gh release create "v${{ steps.bump.outputs.version }}" --title "v${{ steps.bump.outputs.version }}" --generate-notes
         env:
