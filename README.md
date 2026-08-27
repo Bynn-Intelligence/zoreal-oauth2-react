@@ -5,13 +5,6 @@ Login with ZOREAL for React: a ZOREAL Verified Proof-of-Human behind every sign-
 The API mirrors `@react-oauth/google` one to one, renamed, so a team already
 integrated with Google ports by find and replace.
 
-## Status
-
-Early release. The package implements wire protocol v1. The hosted ZOREAL
-login service is still rolling out, so treat this as a preview: the API is
-stable, but end-to-end sign-in against production is not available everywhere
-yet. This note is removed once the service is generally available.
-
 ## Install
 
 ```sh
