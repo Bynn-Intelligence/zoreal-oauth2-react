@@ -1,6 +1,6 @@
 # @zoreal/oauth2-react
 
-[![npm](https://img.shields.io/npm/v/@zoreal/oauth2-react)](https://www.npmjs.com/package/@zoreal/oauth2-react) [![types](https://img.shields.io/npm/types/@zoreal/oauth2-react)](https://www.npmjs.com/package/@zoreal/oauth2-react) [![CI](https://img.shields.io/github/actions/workflow/status/Bynn-Intelligence/zoreal-oauth2-react/ci.yml?branch=main&label=CI)](https://github.com/Bynn-Intelligence/zoreal-oauth2-react/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/@zoreal/oauth2-react)](https://www.npmjs.com/package/@zoreal/oauth2-react) [![types](https://img.shields.io/npm/types/@zoreal/oauth2-react)](https://www.npmjs.com/package/@zoreal/oauth2-react) [![CI](https://img.shields.io/github/actions/workflow/status/Bynn-Intelligence/zoreal-oauth2-react/ci.yml?branch=main&label=CI)](https://github.com/Bynn-Intelligence/zoreal-oauth2-react/actions/workflows/ci.yml) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Bynn-Intelligence/zoreal-oauth2-react/badge)](https://scorecard.dev/viewer/?uri=github.com/Bynn-Intelligence/zoreal-oauth2-react) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Login with ZOREAL for React: a ZOREAL Verified Proof-of-Human behind every sign-in.
 
