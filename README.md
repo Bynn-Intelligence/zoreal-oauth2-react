@@ -213,6 +213,136 @@ requested it. That is the raw material for a KYC check. You remain the controlle
 store, use, and justify collecting it; ZOREAL provides the verified attributes,
 not a regulatory determination.
 
+## Assurance levels — `acr` and requiring a liveness check
+
+### What `acr` is
+
+`acr` is an OpenID Connect standard claim — *Authentication Context Class
+Reference*. It is a string in the ID token that says **how strongly this login
+was authenticated**. Every ZOREAL login carries one. `sub` tells you *who* (a
+stable, pairwise identifier for this person at your site); `acr` tells you *how
+sure ZOREAL is that the person is really there for this login*. A stolen,
+unlocked phone can still produce a `sub`; it cannot produce a fresh
+`zoreal.live`.
+
+This SDK is the **request** side of `acr`: it is where you ask for a level, which
+decides what the holder's ZOREAL ID app makes them do. Whether that level was
+actually reached is decided by the signed token and checked on your backend
+(below).
+
+### The three levels
+
+Weakest to strongest. `acr` reports what actually happened, never what was asked.
+
+| `acr` | What the holder did | `amr` | Proves | Does **not** prove |
+|---|---|---|---|---|
+| `zoreal.session` | Nothing — a returning holder resumed silently from an existing ZOREAL session, no phone interaction | `[]` | Continuity | Presence |
+| `zoreal.device` | Approved on their enrolled phone: a secure-element key signature released by a local biometric/passcode unlock | `["hwk","user"]` | Possession of the enrolled device **and** a local unlock | That a live face was captured for *this* login |
+| `zoreal.live` | The above **plus** a fresh face capture this login — a flash-plus-zoom video scored for presentation attacks and screen replay, matched 1:1 to the government document read at enrolment | `["hwk","face","user"]` | A live, real, unique human, verified to be the enrolled person, **at the moment of this login** | — (strongest) |
+
+`amr` (*Authentication Methods References*) lists the factors: `hwk` a hardware
+key, `user` a presence/unlock gesture, `face` a face biometric. `zoreal.live` is
+`zoreal.device` with `face` added. The default is `zoreal.device` — a login that
+asks for nothing still requires the enrolled phone and a local unlock.
+
+### When to request which
+
+- **`zoreal.device`** (the default): a forum, a community, a normal login. Pass
+  no `acr_values` at all.
+- **`zoreal.live`**: a bank onboarding, a high-value transaction, an age-gated
+  purchase, a first login, a "confirm it is really you" step. Anywhere a fresh,
+  unforgeable proof of the live, right human is worth the few seconds a capture
+  costs.
+- **`zoreal.session`** is never something you *request*; it is the silent
+  convenience re-auth (`prompt: 'none'`) a returning holder gets at a site they
+  have already consented to.
+
+### Requesting it here
+
+`acr_values` is a request option on `useZorealLogin`, `useZorealAutoLogin` and
+`<ZorealLogin>`. Its type is `AcrValue | AcrValue[]` where
+`AcrValue = 'zoreal.live' | 'zoreal.device' | 'zoreal.session'`.
+
+```tsx
+const login = useZorealLogin({
+  flow: 'auth-code',
+  acr_values: 'zoreal.live',        // the app now makes the holder pass a face capture
+  onSuccess: async ({ code, code_verifier, nonce }) => {
+    // Post all three to your backend, which verifies the signed acr claim.
+  },
+  onNonOAuthError: (e) => {
+    // A device that cannot meet the requirement (e.g. no capture on the
+    // platform, or the holder declines) arrives here as
+    // { type: 'request_denied' }, with the provider's reason in e.description.
+  },
+});
+```
+
+In `browser-direct` mode the resolved level comes back on the credential
+response as `response.acr`, parsed from the ID token; the token stays the
+authority.
+
+### Requesting is not verifying — the rule that matters
+
+`acr_values` here is **advisory**. It shapes what the holder is asked to do; it
+is not a security control, because a browser is attacker-controlled and a value
+that only travels through it proves nothing. The proof is the **signed `acr`
+claim** in the ID token, minted by ZOREAL, and it must be verified **on your
+backend**:
+
+- Auth-code flow: your backend receives the code and, after exchanging it, reads
+  the token's `acr`. The ZOREAL backend libraries (`zoreal-oauth2` for Ruby and
+  its siblings for Node, Python, PHP, Go, JVM and .NET) take a required-acr
+  argument at exchange for exactly this, refusing a token below the level.
+- Browser-direct flow: the `credential` is an ID token you still verify
+  server-side against the JWKS, `acr` included.
+
+With the Ruby backend library the required-acr argument is `acr:`; every sibling
+takes the same argument in its own idiom:
+
+```ruby
+login = ZOREAL_OAUTH.authenticate(
+  code:, code_verifier:, nonce:,
+  acr: 'zoreal.live'   # refuses the login unless the signed token says zoreal.live
+)
+login.acr    # "zoreal.live" — what actually happened, read from the signed token
+```
+
+**A relying party that requests `zoreal.live` but never verifies the claim has
+checked nothing.** It has only asked the holder nicely.
+
+### How the check behaves (on your backend)
+
+The requirement you hand a backend library is satisfied **upward**:
+`zoreal.session < zoreal.device < zoreal.live`. Requiring `zoreal.device`
+therefore accepts a `zoreal.live` token — the holder gave you *more* assurance
+than you demanded. A token whose `acr` is below the requirement, missing, or
+outside the vocabulary is refused (in Ruby, a `VerificationError`); an unknown
+*required* value — a typo like `'zoreal.liveness'` — is a bug in your code rather
+than a bad token, so the libraries raise a configuration error instead and fail
+loudly rather than rejecting every login in silence.
+
+If you would rather branch than have the exchange refuse, require nothing and
+inspect the result — the backend libraries expose a predicate for the same upward
+comparison (in Ruby, `login.satisfies_acr?`, with `login.live?` as shorthand):
+
+```ruby
+login = ZOREAL_OAUTH.authenticate(code:, code_verifier:, nonce:)
+unless login.satisfies_acr?('zoreal.live')
+  # step the user up, or refuse the sensitive action
+end
+```
+
+The frontend's only job is the request; each of these checks happens where
+verification means something, which is your server.
+
+### `acr` versus the assurance block
+
+`acr` grades *this login event*. The assurance block in the token (uniqueness
+basis, verification month, chip-liveness, trust tier, key protection) describes
+the *identity behind it* — how the person was proofed at enrolment. One is about
+now; the other about who they are. A high-value flow wants both.
+
 ## What your page needs to allow
 
 The package loads no third-party script, no stylesheet, no font, and has zero
