@@ -236,8 +236,22 @@ What the modal does:
 | **Cancel** | The X, the Cancel button, `Escape`, clicking outside and the timeout are one behaviour: abort the poll, close the modal. An orphaned poll is exactly how a request gets cancelled for over-polling. |
 | **No ZOREAL ID yet** | A footer says the same code also installs the app. Without it the panel reads as "scan this with something I do not have", and the flow dead-ends at the one moment it can still be recovered. |
 | **Themes** | `theme="auto"` (default) follows `prefers-color-scheme`; `"light"` and `"dark"` force it. The QR well stays white in dark mode on purpose — an inverted QR fails on a good number of phone cameras. |
-| **Language** | Ships its own copy in 13 locales. Pass `locale` and the modal matches the page it opened on; omit it and it follows the browser's preference list, English as the floor. Arabic flips the dialog to RTL. |
+| **Language** | Ships its own copy in 39 locales (listed below). Pass `locale` and the modal matches the page it opened on; omit it and it follows the browser's preference list, English as the floor. Arabic, Hebrew and Urdu flip the dialog to RTL. |
 | **Accessibility** | `role="dialog"`, `aria-modal`, labelled by its title, focus moved in on open, scroll locked, visible focus rings, and a `prefers-reduced-motion` fallback. |
+
+### Languages
+
+Arabic · Bengali · Bosnian · Bulgarian · Chinese (Simplified) · Chinese (Traditional) ·
+Croatian · Czech · Danish · Dutch · English · Filipino/Tagalog · Finnish · French ·
+German · Greek · Hebrew · Hindi · Hungarian · Indonesian · Italian · Japanese · Korean ·
+Malay · Norwegian · Polish · Portuguese · Portuguese (Brazil) · Romanian · Russian ·
+Serbian · Spanish · Spanish (Latin America) · Swedish · Thai · Turkish · Ukrainian ·
+Urdu · Vietnamese
+
+Resolution handles the cases that usually get missed: `zh` splits by script rather
+than region, `es-MX` and the other Latin American regions resolve to Latin American
+Spanish instead of peninsular, `pt-BR` stays out of European Portuguese, and the
+superseded codes (`iw`, `in`) plus `nb`/`nn` and `fil` reach the right table.
 
 Styling is a single `<style>` tag injected once, every selector prefixed `zrl-`
 and scoped to the dialog. There is no CSS file to import and nothing to add to

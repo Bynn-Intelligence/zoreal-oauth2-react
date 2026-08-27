@@ -89,7 +89,7 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
   pt: {
     title: 'Digitalize para entrar',
     titleApprove: 'Aprove no seu telefone',
-    bodyScan: 'Digitalize com a câmera do seu telefone ou com o app ZOREAL ID.',
+    bodyScan: 'Digitalize com a câmara do seu telefone ou com a app ZOREAL ID.',
     bodyApprove: 'Aprove o login no app ZOREAL ID.',
     bodyEnrolling: 'Termine de configurar o ZOREAL ID no seu telefone e depois aprove o login.',
     waiting: 'Aguardando digitalização',
@@ -246,10 +246,455 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: '닫기',
     qrAlt: 'ZOREAL로 로그인하기 위한 QR 코드',
   },
+  // Български
+  bg: {
+    title: 'Сканирайте за вход',
+    titleApprove: 'Потвърдете на телефона си',
+    bodyScan: 'Сканирайте с камерата на телефона или с приложението ZOREAL ID.',
+    bodyApprove: 'Потвърдете входа в приложението ZOREAL ID.',
+    bodyEnrolling: 'Довършете настройката на ZOREAL ID на телефона си, след което потвърдете входа.',
+    waiting: 'Изчакване на сканиране',
+    waitingApproval: 'Изчакване на потвърждение',
+    expiresIn: 'Изтича след {time}',
+    secured: 'Проверка Proof-of-Human от ZOREAL',
+    noIdTitle: 'Все още нямате ZOREAL ID?',
+    noIdBody: 'Сканирайте същия код, за да изтеглите приложението и да си създадете безплатен акаунт. Отнема само минута.',
+    cancel: 'Отказ',
+    close: 'Затвори',
+    qrAlt: 'QR код за вход със ZOREAL',
+  },
+  // বাংলা
+  bn: {
+    title: 'সাইন ইন করতে স্ক্যান করুন',
+    titleApprove: 'আপনার ফোনে অনুমোদন করুন',
+    bodyScan: 'আপনার ফোনের ক্যামেরা বা ZOREAL ID অ্যাপ দিয়ে স্ক্যান করুন।',
+    bodyApprove: 'আপনার ZOREAL ID অ্যাপে লগইন অনুমোদন করুন।',
+    bodyEnrolling: 'আপনার ফোনে ZOREAL ID সেটআপ সম্পূর্ণ করুন, তারপর লগইন অনুমোদন করুন।',
+    waiting: 'স্ক্যানের অপেক্ষায়',
+    waitingApproval: 'অনুমোদনের অপেক্ষায়',
+    expiresIn: '{time} পরে মেয়াদ শেষ হবে',
+    secured: 'ZOREAL দ্বারা Proof-of-Human যাচাইকরণ',
+    noIdTitle: 'এখনো ZOREAL ID নেই?',
+    noIdBody: 'অ্যাপ ডাউনলোড করে বিনামূল্যে একটি তৈরি করতে একই কোড স্ক্যান করুন। এতে মাত্র এক মিনিট সময় লাগে।',
+    cancel: 'বাতিল',
+    close: 'বন্ধ',
+    qrAlt: 'ZOREAL দিয়ে সাইন ইন করার জন্য QR কোড',
+  },
+  // Bosanski
+  bs: {
+    title: 'Skenirajte za prijavu',
+    titleApprove: 'Odobrite na svom telefonu',
+    bodyScan: 'Skenirajte kamerom svog telefona ili aplikacijom ZOREAL ID.',
+    bodyApprove: 'Odobrite prijavu u aplikaciji ZOREAL ID.',
+    bodyEnrolling: 'Završite podešavanje ZOREAL ID-a na svom telefonu, a zatim odobrite prijavu.',
+    waiting: 'Čeka se skeniranje',
+    waitingApproval: 'Čeka se odobrenje',
+    expiresIn: 'Ističe za {time}',
+    secured: 'ZOREAL Proof-of-Human verifikacija',
+    noIdTitle: 'Nemate ZOREAL ID?',
+    noIdBody: 'Skenirajte isti kod da preuzmete aplikaciju i besplatno ga napravite. Traje samo minutu.',
+    cancel: 'Otkaži',
+    close: 'Zatvori',
+    qrAlt: 'QR kod za prijavu putem ZOREAL-a',
+  },
+  // Čeština
+  cs: {
+    title: 'Přihlaste se naskenováním',
+    titleApprove: 'Potvrďte v telefonu',
+    bodyScan: 'Naskenujte fotoaparátem telefonu nebo aplikací ZOREAL ID.',
+    bodyApprove: 'Potvrďte přihlášení v aplikaci ZOREAL ID.',
+    bodyEnrolling: 'Dokončete nastavení ZOREAL ID v telefonu a poté potvrďte přihlášení.',
+    waiting: 'Čekání na naskenování',
+    waitingApproval: 'Čekání na potvrzení',
+    expiresIn: 'Vyprší za {time}',
+    secured: 'Ověření Proof-of-Human od ZOREAL',
+    noIdTitle: 'Ještě nemáte ZOREAL ID?',
+    noIdBody: 'Naskenováním stejného kódu si stáhnete aplikaci a zdarma vytvoříte ZOREAL ID. Zabere to jen minutu.',
+    cancel: 'Zrušit',
+    close: 'Zavřít',
+    qrAlt: 'QR kód pro přihlášení pomocí ZOREAL',
+  },
+  // Dansk
+  da: {
+    title: 'Scan for at logge ind',
+    titleApprove: 'Godkend på din telefon',
+    bodyScan: 'Scan med telefonens kamera eller ZOREAL ID-appen.',
+    bodyApprove: 'Godkend login i din ZOREAL ID-app.',
+    bodyEnrolling: 'Færdiggør opsætningen af ZOREAL ID på din telefon, og godkend derefter login.',
+    waiting: 'Venter på scanning',
+    waitingApproval: 'Venter på godkendelse',
+    expiresIn: 'Udløber om {time}',
+    secured: 'Proof-of-Human-verificering af ZOREAL',
+    noIdTitle: 'Har du ikke et ZOREAL ID endnu?',
+    noIdBody: 'Scan den samme kode for at hente appen og oprette et gratis. Det tager kun et minut.',
+    cancel: 'Annuller',
+    close: 'Luk',
+    qrAlt: 'QR-kode til at logge ind med ZOREAL',
+  },
+  // Ελληνικά
+  el: {
+    title: 'Σάρωση για σύνδεση',
+    titleApprove: 'Έγκριση από το κινητό σας',
+    bodyScan: 'Σαρώστε με την κάμερα του κινητού σας ή την εφαρμογή ZOREAL ID.',
+    bodyApprove: 'Εγκρίνετε τη σύνδεση στην εφαρμογή ZOREAL ID.',
+    bodyEnrolling: 'Ολοκληρώστε τη ρύθμιση του ZOREAL ID στο κινητό σας και έπειτα εγκρίνετε τη σύνδεση.',
+    waiting: 'Αναμονή σάρωσης',
+    waitingApproval: 'Αναμονή έγκρισης',
+    expiresIn: 'Λήγει σε {time}',
+    secured: 'Επαλήθευση Proof-of-Human από τη ZOREAL',
+    noIdTitle: 'Δεν έχετε ακόμα ZOREAL ID;',
+    noIdBody: 'Σαρώστε τον ίδιο κωδικό για να κατεβάσετε την εφαρμογή και να δημιουργήσετε ένα δωρεάν. Χρειάζεται μόνο ένα λεπτό.',
+    cancel: 'Άκυρο',
+    close: 'Κλείσιμο',
+    qrAlt: 'Κωδικός QR για σύνδεση με ZOREAL',
+  },
+  // Español (LA)
+  'es-419': {
+    title: 'Escanea para iniciar sesión',
+    titleApprove: 'Aprueba desde tu celular',
+    bodyScan: 'Escanea con la cámara de tu celular o con la app ZOREAL ID.',
+    bodyApprove: 'Aprueba el inicio de sesión en tu app ZOREAL ID.',
+    bodyEnrolling: 'Termina de configurar ZOREAL ID en tu celular y luego aprueba el inicio de sesión.',
+    waiting: 'Esperando escaneo',
+    waitingApproval: 'Esperando aprobación',
+    expiresIn: 'Expira en {time}',
+    secured: 'Verificación Proof-of-Human de ZOREAL',
+    noIdTitle: '¿Todavía no tienes ZOREAL ID?',
+    noIdBody: 'Escanea el mismo código para descargar la app y crear uno gratis. Solo toma un minuto.',
+    cancel: 'Cancelar',
+    close: 'Cerrar',
+    qrAlt: 'Código QR para iniciar sesión con ZOREAL',
+  },
+  // Suomi
+  fi: {
+    title: 'Kirjaudu sisään skannaamalla',
+    titleApprove: 'Hyväksy puhelimessasi',
+    bodyScan: 'Skannaa puhelimesi kameralla tai ZOREAL ID -sovelluksella.',
+    bodyApprove: 'Hyväksy kirjautuminen ZOREAL ID -sovelluksessasi.',
+    bodyEnrolling: 'Viimeistele ZOREAL ID -sovelluksen käyttöönotto puhelimellasi ja hyväksy sitten kirjautuminen.',
+    waiting: 'Odotetaan skannausta',
+    waitingApproval: 'Odotetaan hyväksyntää',
+    expiresIn: 'Vanhenee {time} kuluttua',
+    secured: 'ZOREALin Proof-of-Human-vahvistus',
+    noIdTitle: 'Eikö sinulla ole vielä ZOREAL ID:tä?',
+    noIdBody: 'Skannaa sama koodi ladataksesi sovelluksen ja luodaksesi tunnuksen ilmaiseksi. Se vie vain minuutin.',
+    cancel: 'Peruuta',
+    close: 'Sulje',
+    qrAlt: 'QR-koodi ZOREAL-kirjautumista varten',
+  },
+  // עברית
+  he: {
+    title: 'סרוק כדי להתחבר',
+    titleApprove: 'אשר בטלפון שלך',
+    bodyScan: 'סרוק באמצעות מצלמת הטלפון שלך או אפליקציית ZOREAL ID.',
+    bodyApprove: 'אשר את ההתחברות באפליקציית ZOREAL ID שלך.',
+    bodyEnrolling: 'סיים להגדיר את ZOREAL ID בטלפון שלך, ואז אשר את ההתחברות.',
+    waiting: 'ממתין לסריקה',
+    waitingApproval: 'ממתין לאישור',
+    expiresIn: 'יפוג בעוד {time}',
+    secured: 'אימות Proof-of-Human מבית ZOREAL',
+    noIdTitle: 'עדיין אין לך ZOREAL ID?',
+    noIdBody: 'סרוק את אותו הקוד כדי להוריד את האפליקציה וליצור אחד בחינם. זה לוקח רק דקה.',
+    cancel: 'ביטול',
+    close: 'סגור',
+    qrAlt: 'קוד QR להתחברות עם ZOREAL',
+  },
+  // Hrvatski
+  hr: {
+    title: 'Skenirajte za prijavu',
+    titleApprove: 'Odobrite na svom mobitelu',
+    bodyScan: 'Skenirajte kamerom svog mobitela ili aplikacijom ZOREAL ID.',
+    bodyApprove: 'Odobrite prijavu u aplikaciji ZOREAL ID.',
+    bodyEnrolling: 'Dovršite postavljanje ZOREAL ID-a na svom mobitelu, a zatim odobrite prijavu.',
+    waiting: 'Čeka se skeniranje',
+    waitingApproval: 'Čeka se odobrenje',
+    expiresIn: 'Ističe za {time}',
+    secured: 'ZOREAL Proof-of-Human provjera',
+    noIdTitle: 'Nemate ZOREAL ID?',
+    noIdBody: 'Skenirajte isti kod da preuzmete aplikaciju i besplatno ga izradite. Traje samo minutu.',
+    cancel: 'Odustani',
+    close: 'Zatvori',
+    qrAlt: 'QR kod za prijavu putem ZOREAL-a',
+  },
+  // Magyar
+  hu: {
+    title: 'Bejelentkezés beolvasással',
+    titleApprove: 'Jóváhagyás a telefonján',
+    bodyScan: 'Olvassa be a telefonja kamerájával, vagy a ZOREAL ID alkalmazással.',
+    bodyApprove: 'Hagyja jóvá a bejelentkezést a ZOREAL ID alkalmazásban.',
+    bodyEnrolling: 'Fejezze be a ZOREAL ID beállítását a telefonján, majd hagyja jóvá a bejelentkezést.',
+    waiting: 'Várakozás beolvasásra',
+    waitingApproval: 'Várakozás jóváhagyásra',
+    expiresIn: 'Lejár {time} múlva',
+    secured: 'Proof-of-Human hitelesítés a ZOREAL-tól',
+    noIdTitle: 'Még nincs ZOREAL ID-je?',
+    noIdBody: 'Olvassa be ugyanazt a kódot az alkalmazás letöltéséhez, és hozzon létre egyet ingyenesen. Mindössze egy percet vesz igénybe.',
+    cancel: 'Mégse',
+    close: 'Bezárás',
+    qrAlt: 'QR-kód a ZOREAL-lal való bejelentkezéshez',
+  },
+  // Bahasa Indonesia
+  id: {
+    title: 'Pindai untuk masuk',
+    titleApprove: 'Setujui di ponsel Anda',
+    bodyScan: 'Pindai dengan kamera ponsel atau aplikasi ZOREAL ID.',
+    bodyApprove: 'Setujui proses masuk di aplikasi ZOREAL ID Anda.',
+    bodyEnrolling: 'Selesaikan pengaturan ZOREAL ID di ponsel Anda, lalu setujui proses masuk.',
+    waiting: 'Menunggu pemindaian',
+    waitingApproval: 'Menunggu persetujuan',
+    expiresIn: 'Berakhir dalam {time}',
+    secured: 'Verifikasi Proof-of-Human oleh ZOREAL',
+    noIdTitle: 'Belum punya ZOREAL ID?',
+    noIdBody: 'Pindai kode yang sama untuk mengunduh aplikasi dan membuat akun secara gratis. Hanya butuh waktu satu menit.',
+    cancel: 'Batal',
+    close: 'Tutup',
+    qrAlt: 'Kode QR untuk masuk dengan ZOREAL',
+  },
+  // Italiano
+  it: {
+    title: 'Scansiona per accedere',
+    titleApprove: 'Approva sul tuo telefono',
+    bodyScan: 'Scansiona con la fotocamera del telefono o con l\'app ZOREAL ID.',
+    bodyApprove: 'Approva l\'accesso nell\'app ZOREAL ID.',
+    bodyEnrolling: 'Completa la configurazione di ZOREAL ID sul telefono, poi approva l\'accesso.',
+    waiting: 'In attesa della scansione',
+    waitingApproval: 'In attesa di approvazione',
+    expiresIn: 'Scade tra {time}',
+    secured: 'Verifica Proof-of-Human di ZOREAL',
+    noIdTitle: 'Non hai ancora uno ZOREAL ID?',
+    noIdBody: 'Scansiona lo stesso codice per scaricare l\'app e crearne uno gratis. Basta un minuto.',
+    cancel: 'Annulla',
+    close: 'Chiudi',
+    qrAlt: 'Codice QR per accedere con ZOREAL',
+  },
+  // Bahasa Melayu
+  ms: {
+    title: 'Imbas untuk log masuk',
+    titleApprove: 'Luluskan di telefon anda',
+    bodyScan: 'Imbas dengan kamera telefon atau aplikasi ZOREAL ID.',
+    bodyApprove: 'Luluskan log masuk dalam aplikasi ZOREAL ID anda.',
+    bodyEnrolling: 'Selesaikan persediaan ZOREAL ID di telefon anda, kemudian luluskan log masuk.',
+    waiting: 'Menunggu imbasan',
+    waitingApproval: 'Menunggu kelulusan',
+    expiresIn: 'Tamat tempoh dalam {time}',
+    secured: 'Pengesahan Proof-of-Human oleh ZOREAL',
+    noIdTitle: 'Belum ada ZOREAL ID?',
+    noIdBody: 'Imbas kod yang sama untuk memuat turun aplikasi dan cipta satu secara percuma. Hanya mengambil masa seminit.',
+    cancel: 'Batal',
+    close: 'Tutup',
+    qrAlt: 'Kod QR untuk log masuk dengan ZOREAL',
+  },
+  // Nederlands
+  nl: {
+    title: 'Scan om in te loggen',
+    titleApprove: 'Keur goed op je telefoon',
+    bodyScan: 'Scan met de camera van je telefoon of de ZOREAL ID-app.',
+    bodyApprove: 'Keur de aanmelding goed in je ZOREAL ID-app.',
+    bodyEnrolling: 'Rond het instellen van ZOREAL ID op je telefoon af en keur daarna de aanmelding goed.',
+    waiting: 'Wachten op scan',
+    waitingApproval: 'Wachten op goedkeuring',
+    expiresIn: 'Verloopt over {time}',
+    secured: 'Proof-of-Human-verificatie door ZOREAL',
+    noIdTitle: 'Nog geen ZOREAL ID?',
+    noIdBody: 'Scan dezelfde code om de app te downloaden en gratis een account aan te maken. Dit duurt maar een minuut.',
+    cancel: 'Annuleren',
+    close: 'Sluiten',
+    qrAlt: 'QR-code om in te loggen met ZOREAL',
+  },
+  // Norsk
+  no: {
+    title: 'Skann for å logge inn',
+    titleApprove: 'Godkjenn på telefonen din',
+    bodyScan: 'Skann med telefonens kamera eller ZOREAL ID-appen.',
+    bodyApprove: 'Godkjenn innloggingen i ZOREAL ID-appen din.',
+    bodyEnrolling: 'Fullfør oppsettet av ZOREAL ID på telefonen din, og godkjenn deretter innloggingen.',
+    waiting: 'Venter på skanning',
+    waitingApproval: 'Venter på godkjenning',
+    expiresIn: 'Utløper om {time}',
+    secured: 'Proof-of-Human-verifisering av ZOREAL',
+    noIdTitle: 'Har du ikke ZOREAL ID ennå?',
+    noIdBody: 'Skann den samme koden for å laste ned appen og opprette en gratis. Det tar bare et minutt.',
+    cancel: 'Avbryt',
+    close: 'Lukk',
+    qrAlt: 'QR-kode for å logge inn med ZOREAL',
+  },
+  // Polski
+  pl: {
+    title: 'Zeskanuj, aby się zalogować',
+    titleApprove: 'Zatwierdź w telefonie',
+    bodyScan: 'Zeskanuj aparatem telefonu lub aplikacją ZOREAL ID.',
+    bodyApprove: 'Zatwierdź logowanie w aplikacji ZOREAL ID.',
+    bodyEnrolling: 'Dokończ konfigurację ZOREAL ID w telefonie, a następnie zatwierdź logowanie.',
+    waiting: 'Czekanie na skan',
+    waitingApproval: 'Czekanie na zatwierdzenie',
+    expiresIn: 'Wygasa za {time}',
+    secured: 'Weryfikacja Proof-of-Human od ZOREAL',
+    noIdTitle: 'Nie masz jeszcze ZOREAL ID?',
+    noIdBody: 'Zeskanuj ten sam kod, aby pobrać aplikację i bezpłatnie utworzyć ZOREAL ID. Zajmie to tylko minutę.',
+    cancel: 'Anuluj',
+    close: 'Zamknij',
+    qrAlt: 'Kod QR do logowania za pomocą ZOREAL',
+  },
+  // Português (BR)
+  'pt-br': {
+    title: 'Escaneie para entrar',
+    titleApprove: 'Aprove no seu celular',
+    bodyScan: 'Escaneie com a câmera do seu celular ou com o app ZOREAL ID.',
+    bodyApprove: 'Aprove o login no app ZOREAL ID.',
+    bodyEnrolling: 'Termine de configurar o ZOREAL ID no seu celular e depois aprove o login.',
+    waiting: 'Aguardando escaneamento',
+    waitingApproval: 'Aguardando aprovação',
+    expiresIn: 'Expira em {time}',
+    secured: 'Verificação Proof-of-Human da ZOREAL',
+    noIdTitle: 'Ainda não tem um ZOREAL ID?',
+    noIdBody: 'Escaneie o mesmo código para baixar o app e criar um de graça. Leva só um minuto.',
+    cancel: 'Cancelar',
+    close: 'Fechar',
+    qrAlt: 'Código QR para entrar com ZOREAL',
+  },
+  // Română
+  ro: {
+    title: 'Scanați pentru conectare',
+    titleApprove: 'Aprobați de pe telefon',
+    bodyScan: 'Scanați cu camera telefonului sau cu aplicația ZOREAL ID.',
+    bodyApprove: 'Aprobați conectarea în aplicația ZOREAL ID.',
+    bodyEnrolling: 'Finalizați configurarea ZOREAL ID pe telefon, apoi aprobați conectarea.',
+    waiting: 'Se așteaptă scanarea',
+    waitingApproval: 'Se așteaptă aprobarea',
+    expiresIn: 'Expiră în {time}',
+    secured: 'Verificare Proof-of-Human de la ZOREAL',
+    noIdTitle: 'Nu aveți încă un ZOREAL ID?',
+    noIdBody: 'Scanați același cod pentru a descărca aplicația și a crea unul gratuit. Durează doar un minut.',
+    cancel: 'Anulează',
+    close: 'Închide',
+    qrAlt: 'Cod QR pentru conectare cu ZOREAL',
+  },
+  // Српски
+  sr: {
+    title: 'Скенирајте за пријаву',
+    titleApprove: 'Одобрите на свом телефону',
+    bodyScan: 'Скенирајте камером свог телефона или апликацијом ZOREAL ID.',
+    bodyApprove: 'Одобрите пријаву у апликацији ZOREAL ID.',
+    bodyEnrolling: 'Довршите подешавање ZOREAL ID-а на свом телефону, па одобрите пријаву.',
+    waiting: 'Чека се скенирање',
+    waitingApproval: 'Чека се одобрење',
+    expiresIn: 'Истиче за {time}',
+    secured: 'ZOREAL Proof-of-Human верификација',
+    noIdTitle: 'Немате ZOREAL ID?',
+    noIdBody: 'Скенирајте исти код да преузмете апликацију и бесплатно га направите. Траје само минут.',
+    cancel: 'Откажи',
+    close: 'Затвори',
+    qrAlt: 'QR код за пријаву преко ZOREAL-а',
+  },
+  // ไทย
+  th: {
+    title: 'สแกนเพื่อเข้าสู่ระบบ',
+    titleApprove: 'อนุมัติบนโทรศัพท์ของคุณ',
+    bodyScan: 'สแกนด้วยกล้องโทรศัพท์หรือแอป ZOREAL ID',
+    bodyApprove: 'อนุมัติการเข้าสู่ระบบในแอป ZOREAL ID ของคุณ',
+    bodyEnrolling: 'ตั้งค่า ZOREAL ID บนโทรศัพท์ของคุณให้เสร็จสิ้น แล้วอนุมัติการเข้าสู่ระบบ',
+    waiting: 'รอการสแกน',
+    waitingApproval: 'รอการอนุมัติ',
+    expiresIn: 'หมดอายุใน {time}',
+    secured: 'การยืนยันตัวตน Proof-of-Human โดย ZOREAL',
+    noIdTitle: 'ยังไม่มี ZOREAL ID ใช่ไหม',
+    noIdBody: 'สแกนโค้ดเดียวกันเพื่อดาวน์โหลดแอปและสร้างบัญชีฟรี ใช้เวลาเพียงนาทีเดียว',
+    cancel: 'ยกเลิก',
+    close: 'ปิด',
+    qrAlt: 'คิวอาร์โค้ดสำหรับเข้าสู่ระบบด้วย ZOREAL',
+  },
+  // Tagalog
+  tl: {
+    title: 'I-scan para mag-sign in',
+    titleApprove: 'I-approve sa iyong telepono',
+    bodyScan: 'I-scan gamit ang camera ng iyong telepono o ang ZOREAL ID app.',
+    bodyApprove: 'I-approve ang login sa iyong ZOREAL ID app.',
+    bodyEnrolling: 'Tapusin muna ang pag-set up ng ZOREAL ID sa iyong telepono, pagkatapos ay i-approve ang login.',
+    waiting: 'Naghihintay ng scan',
+    waitingApproval: 'Naghihintay ng approval',
+    expiresIn: 'Mag-e-expire sa {time}',
+    secured: 'Proof-of-Human verification mula sa ZOREAL',
+    noIdTitle: 'Wala ka pang ZOREAL ID?',
+    noIdBody: 'I-scan ang parehong code para i-download ang app at gumawa ng iyong ZOREAL ID nang libre. Isang minuto lang ito.',
+    cancel: 'Kanselahin',
+    close: 'Isara',
+    qrAlt: 'QR code para mag-sign in gamit ang ZOREAL',
+  },
+  // Türkçe
+  tr: {
+    title: 'Giriş için tarayın',
+    titleApprove: 'Telefonunuzdan onaylayın',
+    bodyScan: 'Telefonunuzun kamerasıyla veya ZOREAL ID uygulamasıyla tarayın.',
+    bodyApprove: 'Girişi ZOREAL ID uygulamanızdan onaylayın.',
+    bodyEnrolling: 'Telefonunuzda ZOREAL ID kurulumunu tamamlayın, ardından girişi onaylayın.',
+    waiting: 'Tarama bekleniyor',
+    waitingApproval: 'Onay bekleniyor',
+    expiresIn: '{time} içinde sona erer',
+    secured: 'ZOREAL tarafından Proof-of-Human doğrulaması',
+    noIdTitle: 'Henüz ZOREAL ID\'niz yok mu?',
+    noIdBody: 'Uygulamayı indirmek ve ücretsiz bir tane oluşturmak için aynı kodu tarayın. Sadece bir dakikanızı alır.',
+    cancel: 'İptal',
+    close: 'Kapat',
+    qrAlt: 'ZOREAL ile giriş yapmak için QR kodu',
+  },
+  // Українська
+  uk: {
+    title: 'Скануйте для входу',
+    titleApprove: 'Підтвердьте на телефоні',
+    bodyScan: 'Скануйте камерою телефону або додатком ZOREAL ID.',
+    bodyApprove: 'Підтвердьте вхід у додатку ZOREAL ID.',
+    bodyEnrolling: 'Завершіть налаштування ZOREAL ID на телефоні, а потім підтвердьте вхід.',
+    waiting: 'Очікування сканування',
+    waitingApproval: 'Очікування підтвердження',
+    expiresIn: 'Спливає через {time}',
+    secured: 'Перевірка Proof-of-Human від ZOREAL',
+    noIdTitle: 'Ще немає ZOREAL ID?',
+    noIdBody: 'Скануйте той самий код, щоб завантажити додаток і безкоштовно створити його. Це займе лише хвилину.',
+    cancel: 'Скасувати',
+    close: 'Закрити',
+    qrAlt: 'QR-код для входу через ZOREAL',
+  },
+  // اردو
+  ur: {
+    title: 'لاگ اِن کرنے کے لیے اسکین کریں',
+    titleApprove: 'اپنے فون پر منظوری دیں',
+    bodyScan: 'اپنے فون کے کیمرے یا ZOREAL ID ایپ سے اسکین کریں۔',
+    bodyApprove: 'اپنی ZOREAL ID ایپ میں لاگ اِن کی منظوری دیں۔',
+    bodyEnrolling: 'اپنے فون پر ZOREAL ID کی سیٹ اپ مکمل کریں، پھر لاگ اِن کی منظوری دیں۔',
+    waiting: 'اسکین کا انتظار',
+    waitingApproval: 'منظوری کا انتظار',
+    expiresIn: '{time} میں ختم ہوگا',
+    secured: 'ZOREAL کی جانب سے Proof-of-Human تصدیق',
+    noIdTitle: 'ابھی تک ZOREAL ID نہیں ہے؟',
+    noIdBody: 'ایپ ڈاؤن لوڈ کرنے اور مفت میں ایک بنانے کے لیے وہی کوڈ اسکین کریں۔ اس میں صرف ایک منٹ لگتا ہے۔',
+    cancel: 'منسوخ کریں',
+    close: 'بند کریں',
+    qrAlt: 'ZOREAL کے ساتھ لاگ اِن کرنے کے لیے QR کوڈ',
+  },
+  // Tiếng Việt
+  vi: {
+    title: 'Quét để đăng nhập',
+    titleApprove: 'Phê duyệt trên điện thoại của bạn',
+    bodyScan: 'Quét bằng camera điện thoại hoặc ứng dụng ZOREAL ID.',
+    bodyApprove: 'Phê duyệt đăng nhập trong ứng dụng ZOREAL ID của bạn.',
+    bodyEnrolling: 'Hoàn tất thiết lập ZOREAL ID trên điện thoại, sau đó phê duyệt đăng nhập.',
+    waiting: 'Đang chờ quét mã',
+    waitingApproval: 'Đang chờ phê duyệt',
+    expiresIn: 'Hết hạn sau {time}',
+    secured: 'Xác minh Proof-of-Human bởi ZOREAL',
+    noIdTitle: 'Chưa có ZOREAL ID?',
+    noIdBody: 'Quét cùng mã này để tải ứng dụng và tạo tài khoản miễn phí. Chỉ mất một phút.',
+    cancel: 'Hủy',
+    close: 'Đóng',
+    qrAlt: 'Mã QR để đăng nhập bằng ZOREAL',
+  },
 };
 
 /** Locales whose script runs right to left, so the dialog flips with `dir`. */
-const RTL = new Set(['ar', 'he', 'fa', 'ur']);
+// Only languages we actually carry. Listing an RTL language we do not
+// translate would flip the dialog for someone who is then shown the English
+// fallback — LTR text in an RTL container, which is worse than either alone.
+const RTL = new Set(['ar', 'he', 'iw', 'ur']);
 
 /**
  * One BCP 47 tag to a translation, or undefined if we do not carry it.
@@ -258,14 +703,45 @@ const RTL = new Set(['ar', 'he', 'fa', 'ur']);
  * `zh-CN` / `zh-SG` are Simplified, everything else `zh` is treated as
  * Traditional, matching how the pairing page splits them.
  */
+/**
+ * Primary subtags that reach the same table under another name: superseded ISO
+ * codes some platforms still emit, and the written standards we carry one entry
+ * for. Without these a Norwegian browser sending `nb` gets English while `no`
+ * sits right there in the table.
+ */
+const ALIASES: Record<string, string> = {
+  nb: 'no', // Bokmål — what we actually wrote
+  nn: 'no', // Nynorsk reader, served Bokmål: closer than English
+  fil: 'tl', // Filipino / Tagalog
+  iw: 'he', // superseded code for Hebrew, still emitted by some platforms
+  in: 'id', // superseded code for Indonesian
+};
+
+/**
+ * Spanish and Portuguese ship two variants each, and the split that matters is
+ * not the language but the side of the Atlantic. A `es-MX` browser resolving to
+ * peninsular Spanish is the kind of near-miss that reads as nobody having
+ * thought about it, so the Latin American regions are named explicitly.
+ */
+const LATAM = new Set([
+  'ar', 'bo', 'cl', 'co', 'cr', 'cu', 'do', 'ec', 'gt', 'hn',
+  'mx', 'ni', 'pa', 'pe', 'pr', 'py', 'sv', 'uy', 've', '419',
+]);
+
 function lookup(locale: string): PairingStrings | undefined {
   const tag = locale.toLowerCase().replace(/_/g, '-');
-  const primary = tag.split('-')[0];
+  const parts = tag.split('-');
+  const primary = ALIASES[parts[0]] ?? parts[0];
+  const region = parts[1];
 
+  // Script, not region, is what separates these two.
   if (primary === 'zh') {
     const simplified = /(^|-)(hans|cn|sg|my)(-|$)/.test(tag);
     return TRANSLATIONS[simplified ? 'zhs' : 'zht'];
   }
+  if (primary === 'es' && region && LATAM.has(region)) return TRANSLATIONS['es-419'];
+  if (primary === 'pt' && region === 'br') return TRANSLATIONS['pt-br'];
+
   return TRANSLATIONS[tag] ?? TRANSLATIONS[primary];
 }
 
