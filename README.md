@@ -76,20 +76,28 @@ origin.
 
 ## Quick start: auth-code (email and name, needs your backend)
 
+Two pieces: the provider once, and a button wherever you sign people in. The
+QR, its live status, the countdown and the cancel wiring are the SDK's job.
+
 ```tsx
-import { useState } from 'react';
+// app.tsx — once, around the part of your app that signs in.
+import { ZorealOAuthProvider } from '@zoreal/oauth2-react';
+
+<ZorealOAuthProvider clientId={ZOREAL_CLIENT_ID} locale="en" theme="auto">
+  <App />
+</ZorealOAuthProvider>;
+```
+
+```tsx
+// ZorealSignIn.tsx
 import { useZorealLogin } from '@zoreal/oauth2-react';
 
 function ZorealSignIn() {
-  const [pairing, setPairing] = useState(null);
-
   // `email` (and profile.name, etc.) are returned from /userinfo on your backend.
   const login = useZorealLogin({
     flow: 'auth-code',
     scope: 'openid email profile.name',
-    onPairingStateChange: setPairing,
     onSuccess: async ({ code, code_verifier, nonce }) => {
-      setPairing(null);
       // Send ALL THREE to your backend over TLS. It calls POST /token with the
       // code and verifier plus its client authentication, verifies the ID
       // token's nonce is this one, then reads the email and name from
@@ -100,35 +108,29 @@ function ZorealSignIn() {
         body: JSON.stringify({ code, code_verifier, nonce }),
       });
     },
+    onError: (e) => console.error(e.description ?? e.error),
+    onNonOAuthError: (e) => {
+      // The holder closing or ignoring the request is not an error to surface.
+      if (e.type === 'request_denied' || e.type === 'request_expired') return;
+      console.error(e.description ?? e.type);
+    },
   });
 
-  return (
-    <div>
-      <button onClick={login}>Continue with ZOREAL</button>
-      {pairing && !pairing.appLink && ['pending', 'claimed'].includes(pairing.status) && (
-        <div>
-          <img src={pairing.qrUrl} alt="Log in with ZOREAL" width={200} height={200} />
-          <p>
-            {pairing.status === 'claimed'
-              ? 'Approve the login in your ZOREAL ID app.'
-              : 'Scan with your phone camera or the ZOREAL ID app.'}
-          </p>
-          <button onClick={pairing.cancel}>Cancel</button>
-        </div>
-      )}
-    </div>
-  );
+  return <button onClick={login}>Continue with ZOREAL</button>;
 }
 ```
 
-**The hook renders nothing, so in this flow the pairing UI is yours.** On
-desktop the login cannot complete unless something shows `pairing.qrUrl` (the
-provider-served QR image) for the holder to scan — that is what
-`onPairingStateChange` is for, and since 0.1.4 it carries `pairUrl`, `qrUrl`,
-`appLink` and `cancel` on every callback, including one fired immediately when
-the pairing starts. On a phone (`appLink: true`) the SDK opens the pairing
-link itself and no panel is needed. Only the drop-in `<ZorealLogin>` button
-below renders its own QR panel, and that component is browser-direct only.
+That is the whole integration. When `login()` runs, the provider puts the
+pairing modal on screen; on a phone it skips the QR and opens the ZOREAL ID
+app instead. See [The pairing modal](#the-pairing-modal) for what it does and
+how to theme, translate, time out or replace it.
+
+> **Upgrading from 0.1.x?** Nothing breaks, but you can delete code. If you
+> rendered your own panel from `onPairingStateChange`, that panel and the
+> `useState` behind it are now redundant — remove them and the SDK's modal
+> takes over. To keep yours instead, set `pairingUI="none"` on the provider and
+> nothing changes. `<ZorealLogin>` no longer draws its own inline QR panel; it
+> uses the same modal.
 
 ## Quick start: the button (no backend, pseudonymous)
 
@@ -148,9 +150,10 @@ import { ZorealOAuthProvider, ZorealLogin } from '@zoreal/oauth2-react';
 </ZorealOAuthProvider>
 ```
 
-On desktop the button shows a QR; the user scans it with their phone and
-approves in the ZOREAL ID app. On a phone it opens the app directly. Either
-way your page just receives `onSuccess`.
+On desktop the provider opens the [pairing modal](#the-pairing-modal); the user
+scans the QR with their phone and approves in the ZOREAL ID app. On a phone it
+skips the QR and opens the app directly. Either way your page just receives
+`onSuccess`.
 
 ### On your backend
 
@@ -208,6 +211,57 @@ Things a backend implementer needs to know, learned the concrete way:
 
 `ux_mode: 'redirect'` is not supported in v1: it would put the PKCE verifier
 in a URL, which is a credential in every access log on the path.
+
+## The pairing modal
+
+On desktop, a QR sign-in cannot complete unless something puts the pairing code
+on screen. Since 0.2.0 that something is this package: `ZorealOAuthProvider`
+renders the modal for **both** flows, so `useZorealLogin` integrators get the
+whole pairing UI without writing (or styling, or translating) a line of it.
+
+```jsx
+<ZorealOAuthProvider clientId={CLIENT_ID} locale={i18n.language} theme="auto">
+  <App />
+</ZorealOAuthProvider>
+```
+
+That is the entire integration. Your button stays a button:
+
+```jsx
+const login = useZorealLogin({ flow: 'auth-code', scope: 'openid email', onSuccess });
+return <button onClick={login}>Continue with ZOREAL</button>;
+```
+
+What the modal does:
+
+| | |
+| --- | --- |
+| **Mobile** | No QR. The SDK opens the pairing link, which the ZOREAL ID app claims; the modal never appears. Force one or the other with `display: 'qr'` / `'link'`. |
+| **Live status** | The copy and the title follow the pairing: waiting for a scan, then waiting for approval once the holder has claimed the code (the spent QR blurs out behind a phone glyph). |
+| **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
+| **Timeout** | Closes and cancels at zero. Defaults to 120s; override with `pairingTimeoutMs`. The provider's own expiry wins when it is shorter. |
+| **Cancel** | The X, the Cancel button, `Escape`, clicking outside and the timeout are one behaviour: abort the poll, close the modal. An orphaned poll is exactly how a request gets cancelled for over-polling. |
+| **No ZOREAL ID yet** | A footer says the same code also installs the app. Without it the panel reads as "scan this with something I do not have", and the flow dead-ends at the one moment it can still be recovered. |
+| **Themes** | `theme="auto"` (default) follows `prefers-color-scheme`; `"light"` and `"dark"` force it. The QR well stays white in dark mode on purpose — an inverted QR fails on a good number of phone cameras. |
+| **Language** | Ships its own copy in 13 locales. Pass `locale` and the modal matches the page it opened on; omit it and it follows the browser's preference list, English as the floor. Arabic flips the dialog to RTL. |
+| **Accessibility** | `role="dialog"`, `aria-modal`, labelled by its title, focus moved in on open, scroll locked, visible focus rings, and a `prefers-reduced-motion` fallback. |
+
+Styling is a single `<style>` tag injected once, every selector prefixed `zrl-`
+and scoped to the dialog. There is no CSS file to import and nothing to add to
+your build, because a required import step is a required support ticket.
+
+### Rendering it yourself
+
+If you already have a design system you want the QR to live inside, opt out:
+
+```jsx
+<ZorealOAuthProvider clientId={CLIENT_ID} pairingUI="none">
+```
+
+`onPairingStateChange` then carries everything you need on every state:
+`qrUrl`, `pairUrl`, `status`, `expiresIn` and `cancel`. Render `qrUrl` in an
+`<img>`; do not draw your own. `PairingModal` is also exported if you want the
+real dialog but on your own terms.
 
 ## Scopes and claims
 

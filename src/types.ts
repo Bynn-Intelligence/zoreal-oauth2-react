@@ -170,3 +170,22 @@ export interface UseZorealAutoLoginOptions {
   disabled?: boolean;
   scope?: string;
 }
+
+/**
+ * Colour scheme for the SDK-rendered pairing modal. 'auto' follows the
+ * viewer's OS setting; the explicit values are for hosts that theme
+ * independently of it.
+ */
+export type ZorealTheme = 'auto' | 'light' | 'dark';
+
+/**
+ * Who draws the QR while a pairing is open.
+ *
+ * 'modal' (the default) means the SDK does, in its own dialog: the flow cannot
+ * complete unless something renders the pair URL, and leaving that to every
+ * integrator is how a QR sign-in ships with no QR on screen.
+ *
+ * 'none' opts out entirely and hands the job back to you via
+ * `onPairingStateChange`, which carries `qrUrl`, `pairUrl` and `cancel`.
+ */
+export type PairingUI = 'modal' | 'none';

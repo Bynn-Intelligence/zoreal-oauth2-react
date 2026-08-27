@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useZorealOAuth } from './context';
+import { useZorealOAuth, useZorealPairingHost } from './context';
 import { unsafeClaims } from './jwt';
 import {
   FlowAbandonedError,
@@ -66,13 +66,25 @@ export function useZorealFlow(options: InternalFlowOptions): {
 } {
   const { clientId, issuer, locale } = useZorealOAuth();
   const [pairing, setPairing] = useState<ActivePairing | null>(null);
+  // Null when the provider is set to pairingUI: 'none', which is the caller
+  // saying they render the QR themselves. Held in a ref so `login` keeps its
+  // identity across renders.
+  const publish = useZorealPairingHost();
+  const publishRef = useRef(publish);
+  publishRef.current = publish;
   const abortRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   // A component unmounting mid-login must stop the poll: the provider cancels
   // over-polled requests, and an orphaned interval is exactly how one happens.
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      publishRef.current?.(null);
+    },
+    []
+  );
 
   const login = useCallback(() => {
     const opts = optionsRef.current;
@@ -117,6 +129,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
           const cancel = () => {
             controller.abort();
             setPairing(null);
+            publishRef.current?.(null);
           };
           // Everything a caller-rendered pairing UI needs, on every state it
           // sees: the QR flow cannot complete unless SOMETHING renders
@@ -136,6 +149,9 @@ export function useZorealFlow(options: InternalFlowOptions): {
             cancel,
           };
           setPairing(active);
+          if (!useAppLink) {
+            publishRef.current?.({ state: active.state, qrUrl: surface.qrUrl, cancel });
+          }
           // The initial state, immediately: the first poll response is one
           // round-trip away, and a UI that waits for it opens visibly empty.
           opts.onPairingStateChange?.(active.state);
@@ -156,6 +172,9 @@ export function useZorealFlow(options: InternalFlowOptions): {
               setPairing((p) =>
                 p && p.requestId === started.request_id ? { ...p, state: enriched } : p
               );
+              if (!useAppLink) {
+                publishRef.current?.({ state: enriched, qrUrl: surface.qrUrl, cancel });
+              }
               opts.onPairingStateChange?.(enriched);
             },
             controller.signal
@@ -163,6 +182,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
         }
 
         setPairing(null);
+        publishRef.current?.(null);
 
         if (flow === 'auth-code') {
           opts.onCode?.({
@@ -190,6 +210,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
         opts.onCredential?.(response);
       } catch (e) {
         setPairing(null);
+        publishRef.current?.(null);
         if (e instanceof DOMException && e.name === 'AbortError') return;
         if (e instanceof FlowAbandonedError) {
           opts.onNonOAuthError?.(e.reason);
