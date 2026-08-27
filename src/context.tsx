@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { DEFAULT_ISSUER } from './wire';
 
 export interface ZorealOAuthProviderProps {
-  /** From the zoreal-web dashboard: the asset ID. */
+  /** From the ZOREAL dashboard: the asset ID. */
   clientId: string;
   /** Override the provider origin. Sandbox and self-hosted testing only. */
   issuer?: string;
