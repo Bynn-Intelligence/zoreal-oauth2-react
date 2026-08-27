@@ -29,7 +29,7 @@
  */
 
 export const WIRE_VERSION = 1;
-export const SDK_VERSION = '0.1.3';
+export const SDK_VERSION = '0.1.4';
 export const DEFAULT_ISSUER = 'https://id.zoreal.com';
 
 /** Pending TTL is short. Poll gently; over-polling cancels the request. */
@@ -52,7 +52,7 @@ export interface PairImmediate {
 export type PairStartResponse = PairCreated | PairImmediate;
 
 export interface PairStatusResponse {
-  status: 'pending' | 'claimed' | 'approved' | 'denied' | 'expired' | 'enrolling';
+  status: 'pending' | 'claimed' | 'approved' | 'denied' | 'expired' | 'cancelled' | 'enrolling';
   code?: string;
   expires_in?: number;
   enrolment_deadline?: number;

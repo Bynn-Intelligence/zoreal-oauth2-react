@@ -41,11 +41,25 @@ export type SelectBy = 'qr' | 'app_link' | 'device' | 'session';
 export type AcrValue = 'zoreal.live' | 'zoreal.device' | 'zoreal.session';
 
 export interface PairingState {
-  status: 'pending' | 'claimed' | 'approved' | 'denied' | 'expired' | 'enrolling';
+  status: 'pending' | 'claimed' | 'approved' | 'denied' | 'expired' | 'cancelled' | 'enrolling';
   /** Present while status is 'pending'. Seconds. */
   expiresIn?: number;
   /** Present while status is 'enrolling'. Enrolment extends the window well beyond a normal login. */
   enrolmentDeadline?: number;
+  /**
+   * The pairing link and its provider-served QR image. Added in 0.1.4, from the
+   * first real integration: `ZorealLogin` renders the QR itself, but it is
+   * browser-direct only, so an auth-code integration has to render its own
+   * pairing UI — and this callback was the documented place to do that while
+   * carrying nothing to render. Present on every callback of a QR/link flow.
+   */
+  pairUrl?: string;
+  /** The provider-served SVG of pairUrl. Put it in an <img>; do not draw your own. */
+  qrUrl?: string;
+  /** True when the flow resolved to the app link (mobile) rather than a QR. */
+  appLink?: boolean;
+  /** Abandons this pairing: stops the poll. Wire it to your UI's cancel control. */
+  cancel?: () => void;
 }
 
 export interface ZorealLoginRequestOptions {
@@ -102,6 +116,14 @@ export interface ZorealCodeResponse {
    * to YOUR backend over TLS and nowhere else.
    */
   code_verifier: string;
+  /**
+   * The nonce the SDK generated for this flow. Added in 0.1.4: the ID token
+   * carries it, the SDK generated it, and without handing it over the backend
+   * doing the exchange has no way to check the token it receives was minted for
+   * this login rather than substituted. Verify it against the ID token's nonce
+   * claim, alongside iss, aud and exp. Same travel rule as code_verifier.
+   */
+  nonce: string;
 }
 
 export interface BrowserDirectFlowOptions extends ZorealLoginRequestOptions {

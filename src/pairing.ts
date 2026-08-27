@@ -85,6 +85,12 @@ export async function startPairing(
 
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
+    // An already-aborted signal never fires its abort event, so check first
+    // or the sleep runs to term and the poll takes one extra swing.
+    if (signal?.aborted) {
+      reject(new DOMException('aborted', 'AbortError'));
+      return;
+    }
     const t = setTimeout(resolve, ms);
     signal?.addEventListener('abort', () => {
       clearTimeout(t);
@@ -132,6 +138,15 @@ export async function pollUntilApproved(
         throw new FlowAbandonedError({ type: 'request_denied', description: body.error_description });
       case 'expired':
         throw new FlowAbandonedError({ type: 'request_expired', description: body.error_description });
+      case 'cancelled':
+        // The provider cancels an over-polled or abandoned request outright
+        // (its pairing rows have a real cancelled state). Before 0.1.4 this
+        // fell through to the default branch and polled a dead request
+        // forever.
+        throw new FlowAbandonedError({
+          type: 'request_expired',
+          description: body.error_description ?? 'the provider cancelled the pairing request',
+        });
       case 'enrolling':
         await sleep(POLL_INTERVAL_ENROLLING_MS, signal);
         break;

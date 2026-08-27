@@ -114,18 +114,31 @@ export function useZorealFlow(options: InternalFlowOptions): {
             opts.display === 'link' || (opts.display !== 'qr' && isMobileUserAgent());
           selectBy = useAppLink ? 'app_link' : 'qr';
 
-          const active: ActivePairing = {
-            requestId: started.request_id,
+          const cancel = () => {
+            controller.abort();
+            setPairing(null);
+          };
+          // Everything a caller-rendered pairing UI needs, on every state it
+          // sees: the QR flow cannot complete unless SOMETHING renders
+          // pairUrl, and for the auth-code flow that something is the caller.
+          const surface = {
             pairUrl: started.pair_url,
             qrUrl: `${issuer}/pair/${encodeURIComponent(started.request_id)}/qr.svg`,
-            state: { status: 'pending', expiresIn: started.expires_in },
             appLink: useAppLink,
-            cancel: () => {
-              controller.abort();
-              setPairing(null);
-            },
+            cancel,
+          };
+          const active: ActivePairing = {
+            requestId: started.request_id,
+            pairUrl: surface.pairUrl,
+            qrUrl: surface.qrUrl,
+            state: { status: 'pending', expiresIn: started.expires_in, ...surface },
+            appLink: useAppLink,
+            cancel,
           };
           setPairing(active);
+          // The initial state, immediately: the first poll response is one
+          // round-trip away, and a UI that waits for it opens visibly empty.
+          opts.onPairingStateChange?.(active.state);
 
           if (useAppLink) {
             // The universal link, in the same tab: the app claims it, and with
@@ -139,8 +152,11 @@ export function useZorealFlow(options: InternalFlowOptions): {
             issuer,
             started.request_id,
             (s) => {
-              setPairing((p) => (p && p.requestId === started.request_id ? { ...p, state: s } : p));
-              opts.onPairingStateChange?.(s);
+              const enriched = { ...s, ...surface };
+              setPairing((p) =>
+                p && p.requestId === started.request_id ? { ...p, state: enriched } : p
+              );
+              opts.onPairingStateChange?.(enriched);
             },
             controller.signal
           );
@@ -154,6 +170,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
             scope: opts.scope ?? 'openid',
             app_state: opts.app_state,
             code_verifier: verifier,
+            nonce,
           });
           return;
         }

@@ -73,6 +73,13 @@ describe('pollUntilApproved', () => {
       FlowAbandonedError
     );
   });
+
+  it('a cancelled request stops the poll instead of spinning on it', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ status: 'cancelled' }));
+    await expect(
+      pollUntilApproved('https://id.zoreal.test', 'r1')
+    ).rejects.toMatchObject({ reason: { type: 'request_expired' } });
+  });
 });
 
 describe('exchangeCode', () => {

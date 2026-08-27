@@ -34,24 +34,58 @@ npm install @zoreal/oauth2-react
 ## Quick start: auth-code (email and name, needs your backend)
 
 ```tsx
+import { useState } from 'react';
 import { useZorealLogin } from '@zoreal/oauth2-react';
 
-// `email` (and profile.name, etc.) are returned from /userinfo on your backend.
-const login = useZorealLogin({
-  flow: 'auth-code',
-  scope: 'openid email profile.name',
-  onSuccess: async ({ code, code_verifier }) => {
-    // Send BOTH to your backend over TLS. Your backend calls POST /token with
-    // them plus its client authentication, then reads the email and name from
-    // /userinfo. That is where personal data is delivered.
-    const session = await fetch('/api/auth/zoreal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, code_verifier }),
-    });
-  },
-});
+function ZorealSignIn() {
+  const [pairing, setPairing] = useState(null);
+
+  // `email` (and profile.name, etc.) are returned from /userinfo on your backend.
+  const login = useZorealLogin({
+    flow: 'auth-code',
+    scope: 'openid email profile.name',
+    onPairingStateChange: setPairing,
+    onSuccess: async ({ code, code_verifier, nonce }) => {
+      setPairing(null);
+      // Send ALL THREE to your backend over TLS. It calls POST /token with the
+      // code and verifier plus its client authentication, verifies the ID
+      // token's nonce is this one, then reads the email and name from
+      // /userinfo. That is where personal data is delivered.
+      await fetch('/api/auth/zoreal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, code_verifier, nonce }),
+      });
+    },
+  });
+
+  return (
+    <div>
+      <button onClick={login}>Continue with ZOREAL</button>
+      {pairing && !pairing.appLink && ['pending', 'claimed'].includes(pairing.status) && (
+        <div>
+          <img src={pairing.qrUrl} alt="Log in with ZOREAL" width={200} height={200} />
+          <p>
+            {pairing.status === 'claimed'
+              ? 'Approve the login in your ZOREAL ID app.'
+              : 'Scan with your phone camera or the ZOREAL ID app.'}
+          </p>
+          <button onClick={pairing.cancel}>Cancel</button>
+        </div>
+      )}
+    </div>
+  );
+}
 ```
+
+**The hook renders nothing, so in this flow the pairing UI is yours.** On
+desktop the login cannot complete unless something shows `pairing.qrUrl` (the
+provider-served QR image) for the holder to scan — that is what
+`onPairingStateChange` is for, and since 0.1.4 it carries `pairUrl`, `qrUrl`,
+`appLink` and `cancel` on every callback, including one fired immediately when
+the pairing starts. On a phone (`appLink: true`) the SDK opens the pairing
+link itself and no panel is needed. Only the drop-in `<ZorealLogin>` button
+below renders its own QR panel, and that component is browser-direct only.
 
 ## Quick start: the button (no backend, pseudonymous)
 
@@ -77,8 +111,17 @@ way your page just receives `onSuccess`.
 
 ### On your backend
 
-Exchange the `code` and `code_verifier` your `onSuccess` posted, then read the
-user's details:
+There is a sibling library for every major backend — use one instead of
+hand-rolling the exchange (the family table at the bottom lists them all).
+With the Ruby one, the whole thing is:
+
+```ruby
+login = ZOREAL_OAUTH.authenticate(code:, code_verifier:, nonce:)
+login.sub    # your stable account key
+login.email  # from /userinfo, with the email scope
+```
+
+On the wire, what every one of them does:
 
 ```
 POST https://id.zoreal.com/token
@@ -86,7 +129,7 @@ POST https://id.zoreal.com/token
   code=<code>
   code_verifier=<code_verifier>
   client_id=ast_your_asset_id
-  <your client authentication>     # client secret, or a private_key_jwt assertion
+  <your client authentication>     # HTTP Basic client secret, or a private_key_jwt assertion
 
 -> { "id_token": "...", "access_token": "...", "expires_in": 600 }
 
@@ -96,9 +139,29 @@ GET https://id.zoreal.com/userinfo
 -> { "sub": "...", "email": "...", "email_verified": true, "given_name": "...", ... }
 ```
 
-Which fields come back depends on the scopes the user consented to. The
-`id_token` is a JWT you verify against the JWKS at
-`https://id.zoreal.com/jwks`.
+Which fields come back depends on the scopes the user consented to.
+
+Things a backend implementer needs to know, learned the concrete way:
+
+- **The `id_token` is ES256, only ever ES256.** Verify against the JWKS at
+  `{issuer}/jwks`; a library defaulting to RS256 rejects every real token.
+- **Check `iss` by exact string comparison** against your configured issuer,
+  `aud` against your client id, `exp`, and **the `nonce` your frontend posted**
+  against the token's nonce claim — without that last check you cannot tell a
+  substituted token from the real one, which is why `onSuccess` hands the
+  nonce over.
+- **The ID token carries no personal data, by design.** Email and profile
+  claims exist only at `/userinfo`. An integration that only decodes the ID
+  token and looks for an email finds none, and that is not a bug.
+- **The access token lives 10 minutes.** Call `/userinfo` while handling the
+  login; do not store the token.
+- **`sub` is pairwise per verified domain.** It is the right account key, and
+  changing your asset's domain rotates every `sub` you have stored — treat a
+  domain change as a data migration, not a settings edit.
+- **The provider publishes no `authorization_endpoint`.** The flow starts at
+  `/pair` (this SDK's job) and finishes at `/token` (your backend's); a
+  generic OIDC relying-party library that wants to build an authorize URL has
+  nothing to point at. Use the family libraries.
 
 `ux_mode: 'redirect'` is not supported in v1: it would put the PKCE verifier
 in a URL, which is a credential in every access log on the path.
@@ -173,6 +236,39 @@ runtime dependencies. Two things touch the network, both on the ZOREAL origin:
 - **The button copy is neutral.** "Continue with ZOREAL" and variants; there is
   no "verified human" button text and there will not be one. The assertion
   lives in the token, where it is verifiable.
+
+## Registration and development
+
+The client id is the asset token from the ZOREAL dashboard (the asset's OAuth2
+tab). Personal-data scopes need a confidential client on a verified domain;
+the pairing start and its poll are checked against the client's authorized
+JavaScript origins, so register the exact origins your pages run on. A
+sandbox-environment client additionally accepts any `http://localhost` origin,
+which is what makes local development work without registering every port.
+
+Point the provider at a non-production issuer with the `issuer` prop; the
+value must match the `iss` inside the tokens exactly.
+
+## The ZOREAL OAuth2 library family
+
+| Repository | Package | Role |
+|---|---|---|
+| zoreal-oauth2-react | @zoreal/oauth2-react (npm) | React frontend: the button, the QR, the polling |
+| zoreal-oauth2-js | @zoreal/oauth2-js (npm) | Framework-free browser core |
+| zoreal-oauth2-react-native | @zoreal/oauth2-react-native (npm) | React Native frontend |
+| zoreal-oauth2-node | @zoreal/oauth2-node (npm) | Node.js backend |
+| zoreal-oauth2-ruby | zoreal-oauth2 (RubyGems) | Ruby backend |
+| zoreal-oauth2-python | zoreal-oauth2 (PyPI) | Python backend |
+| zoreal-oauth2-php | zoreal/oauth2 (Packagist) | PHP backend |
+| zoreal-oauth2-go | github.com/Bynn-Intelligence/zoreal-oauth2-go | Go backend |
+| zoreal-oauth2-java | com.zoreal:oauth2 (Maven Central) | JVM backend |
+| zoreal-oauth2-dotnet | Zoreal.OAuth2 (NuGet) | .NET backend |
+
+Every backend library supports all four registered client authentication
+methods: `none` (public client, PKCE alone), `client_secret_basic`,
+`private_key_jwt` (a fresh 60-second single-use assertion per exchange), and
+`tls_client_auth` (configurable now; the provider itself does not accept it at
+`/token` yet and answers 501, which the libraries surface rather than hide).
 
 ## License
 
