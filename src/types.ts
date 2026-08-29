@@ -95,10 +95,13 @@ export interface ZorealButtonConfiguration {
   theme?: 'outline' | 'filled' | 'filled_black';
   size?: 'large' | 'medium' | 'small';
   /**
-   * All four are neutral. The button asserts nothing about a person who has not yet
-   * authenticated; there is no 'verified_human' variant.
+   * All five are neutral. The button asserts nothing about a person who has
+   * not yet authenticated; there is no 'verified_human' variant. 'verify_with'
+   * stays inside that rule: it names the act the button starts, not a state
+   * the person already holds — built for surfaces where the login IS a check
+   * (ZOREAL Meet's presence request), not a sign-in.
    */
-  text?: 'continue_with' | 'signin_with' | 'signup_with' | 'signin';
+  text?: 'continue_with' | 'signin_with' | 'signup_with' | 'signin' | 'verify_with';
   shape?: 'rectangular' | 'pill' | 'square';
   logo_alignment?: 'left' | 'center';
   width?: string | number;
@@ -151,8 +154,18 @@ export interface AuthCodeFlowOptions extends ZorealLoginRequestOptions {
   ux_mode?: 'popup' | 'redirect';
 }
 
-export type ZorealLoginProps = {
-  onSuccess: (response: ZorealCredentialResponse) => void;
+/**
+ * The button runs either flow, discriminated on `flow` exactly as
+ * useZorealLogin is: browser-direct (the default) hands onSuccess an ID
+ * token; auth-code hands it the code, PKCE verifier and nonce for YOUR
+ * backend to redeem. Added in 0.2.8 — before that the button was
+ * browser-direct only and auth-code integrations had to rebuild the button
+ * around the hook to get the same pixels.
+ */
+export type ZorealLoginProps = (
+  | { flow?: 'browser-direct'; onSuccess: (response: ZorealCredentialResponse) => void }
+  | { flow: 'auth-code'; onSuccess: (response: ZorealCodeResponse) => void }
+) & {
   onError?: (error: NonOAuthError) => void;
   containerProps?: React.ComponentPropsWithoutRef<'div'>;
 } & ZorealLoginRequestOptions &

@@ -1,11 +1,18 @@
 import { useMemo, type CSSProperties } from 'react';
 import { useZorealFlow } from './useZorealLogin';
 import { ZorealMark } from './mark';
-import type { NonOAuthError, ZorealLoginProps } from './types';
+import type {
+  NonOAuthError,
+  ZorealCodeResponse,
+  ZorealCredentialResponse,
+  ZorealLoginProps,
+} from './types';
 
 /**
- * The drop-in button. It receives no access token, so it returns the
- * pseudonymous identity only; personal data needs the auth-code flow.
+ * The drop-in button. In its default browser-direct flow it receives no
+ * access token, so it returns the pseudonymous identity only; personal data
+ * needs `flow: 'auth-code'`, which hands your backend the code instead
+ * (supported here since 0.2.8, same discriminator as useZorealLogin).
  *
  * The copy is neutral: the button asserts nothing about a person who has not
  * yet authenticated. Styling is inline and self-contained; no stylesheet, no
@@ -22,6 +29,7 @@ const TEXTS: Record<NonNullable<ZorealLoginProps['text']>, string> = {
   signin_with: 'Sign in with ZOREAL',
   signup_with: 'Sign up with ZOREAL',
   signin: 'Sign in',
+  verify_with: 'Verify with ZOREAL ID',
 };
 
 const SIZES = {
@@ -43,13 +51,19 @@ export function ZorealLogin(props: ZorealLoginProps) {
     logo_alignment = 'left',
     width,
     click_listener,
+    flow = 'browser-direct',
     ...request
   } = props;
 
   const { login } = useZorealFlow({
     ...request,
-    flow: 'browser-direct',
-    onCredential: onSuccess,
+    flow,
+    onCredential:
+      flow === 'browser-direct'
+        ? (onSuccess as (r: ZorealCredentialResponse) => void)
+        : undefined,
+    onCode:
+      flow === 'auth-code' ? (onSuccess as unknown as (r: ZorealCodeResponse) => void) : undefined,
     onError: (e) => onError?.({ type: 'unknown', description: e.description ?? e.error }),
     onNonOAuthError: (e: NonOAuthError) => onError?.(e),
   });
