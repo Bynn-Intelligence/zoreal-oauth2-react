@@ -59,8 +59,25 @@ export interface PairingState {
    * carrying nothing to render. Present on every callback of a QR/link flow.
    */
   pairUrl?: string;
-  /** The provider-served SVG of pairUrl. Put it in an <img>; do not draw your own. */
+  /**
+   * The provider-served SVG to show right now. Put it in an <img>; do not draw
+   * your own.
+   *
+   * IT CHANGES DURING THE PAIRING. The code on screen is one frame of a
+   * rotating sequence, and a frame the provider has moved past is refused when
+   * the phone tries to claim it, which is what stops a screenshot of the code
+   * from being relayed to someone else's browser. So render the qrUrl of the
+   * state you are handed, every time you are handed one; a UI that caches the
+   * first value shows a code that stops working seconds later.
+   */
   qrUrl?: string;
+  /**
+   * How often, in seconds, `qrUrl` is replaced while the pairing is pending.
+   * Informational: the SDK already emits a new state on that cadence, so a
+   * custom UI does not need a timer of its own. Absent on the app link, which
+   * has no QR.
+   */
+  qrRefreshSeconds?: number;
   /** True when the flow resolved to the app link (mobile) rather than a QR. */
   appLink?: boolean;
   /** Abandons this pairing: stops the poll. Wire it to your UI's cancel control. */

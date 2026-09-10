@@ -5,8 +5,9 @@ import {
   FlowAbandonedError,
   OAuthFlowError,
   exchangeCode,
-  isMobileUserAgent,
   pollUntilApproved,
+  qrRefreshSecondsOf,
+  resolveDisplay,
   startPairing,
 } from './pairing';
 import { challengeS256, generateState, generateVerifier } from './pkce';
@@ -26,6 +27,11 @@ import type {
 export interface ActivePairing {
   requestId: string;
   pairUrl: string;
+  /**
+   * The QR image to show right now. It MOVES: a QR pairing's code is a frame
+   * the provider rotates every few seconds, so read this from the latest
+   * state rather than holding the first value.
+   */
   qrUrl: string;
   state: PairingState;
   /** True when display resolved to the app link rather than the QR. */
@@ -98,6 +104,14 @@ export function useZorealFlow(options: InternalFlowOptions): {
       const state = generateState();
       const nonce = generateState();
 
+      // Which surface this login will use is decided HERE, before the pairing
+      // exists, because the provider binds the pairing to it: a QR pairing
+      // gets a rotating code, a link pairing gets a start token on its URL and
+      // no QR at all. Deciding afterwards would mean asking for one surface
+      // and showing another.
+      const display = resolveDisplay(opts.display);
+      const useAppLink = display === 'link';
+
       try {
         const started = await startPairing(issuer, {
           client_id: clientId,
@@ -112,6 +126,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
           max_age: opts.max_age,
           prompt: opts.prompt,
           locale,
+          display,
         });
 
         let code: string;
@@ -122,9 +137,8 @@ export function useZorealFlow(options: InternalFlowOptions): {
           code = started.code;
           selectBy = 'session';
         } else {
-          const useAppLink =
-            opts.display === 'link' || (opts.display !== 'qr' && isMobileUserAgent());
           selectBy = useAppLink ? 'app_link' : 'qr';
+          const qrRefreshSeconds = qrRefreshSecondsOf(started);
 
           const cancel = () => {
             controller.abort();
@@ -134,23 +148,31 @@ export function useZorealFlow(options: InternalFlowOptions): {
           // Everything a caller-rendered pairing UI needs, on every state it
           // sees: the QR flow cannot complete unless SOMETHING renders
           // pairUrl, and for the auth-code flow that something is the caller.
+          // qrUrl is deliberately NOT in here: it is the one field that
+          // changes during the pairing, and a fixed copy spread over every
+          // state would paste the first frame back on top of the current one.
           const surface = {
             pairUrl: started.pair_url,
-            qrUrl: `${issuer}/pair/${encodeURIComponent(started.request_id)}/qr.svg`,
             appLink: useAppLink,
             cancel,
+            // The app link has no QR and therefore no cadence to report.
+            ...(useAppLink ? null : { qrRefreshSeconds }),
           };
+          // The frame on screen. The poll replaces it every qrRefreshSeconds;
+          // everything published in between reuses whatever is current, so the
+          // three channels below never disagree about which code is showing.
+          let qrUrl = `${issuer}/pair/${encodeURIComponent(started.request_id)}/qr.svg`;
           const active: ActivePairing = {
             requestId: started.request_id,
             pairUrl: surface.pairUrl,
-            qrUrl: surface.qrUrl,
-            state: { status: 'pending', expiresIn: started.expires_in, ...surface },
+            qrUrl,
+            state: { status: 'pending', expiresIn: started.expires_in, qrUrl, ...surface },
             appLink: useAppLink,
             cancel,
           };
           setPairing(active);
           if (!useAppLink) {
-            publishRef.current?.({ state: active.state, qrUrl: surface.qrUrl, cancel });
+            publishRef.current?.({ state: active.state, qrUrl, cancel });
           }
           // The initial state, immediately: the first poll response is one
           // round-trip away, and a UI that waits for it opens visibly empty.
@@ -159,8 +181,9 @@ export function useZorealFlow(options: InternalFlowOptions): {
           if (useAppLink) {
             // The universal link, in the same tab: the app claims it, and with
             // no app installed the same URL is the real pairing page which can
-            // enrol (02 sections 3 and 4). A popup here would be blocked more
-            // often than it would help.
+            // enrol. A popup here would be blocked more often than it would
+            // help. The URL carries the start token that binds the claim to
+            // this browser, so it is used exactly as the provider gave it.
             window.location.assign(started.pair_url);
           }
 
@@ -168,16 +191,22 @@ export function useZorealFlow(options: InternalFlowOptions): {
             issuer,
             started.request_id,
             (s) => {
-              const enriched = { ...s, ...surface };
+              // A refresh arrives as a state carrying a new qrUrl; a poll
+              // arrives without one and keeps the frame already showing.
+              if (s.qrUrl) qrUrl = s.qrUrl;
+              const enriched = { ...s, ...surface, qrUrl };
               setPairing((p) =>
-                p && p.requestId === started.request_id ? { ...p, state: enriched } : p
+                p && p.requestId === started.request_id ? { ...p, qrUrl, state: enriched } : p
               );
               if (!useAppLink) {
-                publishRef.current?.({ state: enriched, qrUrl: surface.qrUrl, cancel });
+                publishRef.current?.({ state: enriched, qrUrl, cancel });
               }
               opts.onPairingStateChange?.(enriched);
             },
-            controller.signal
+            controller.signal,
+            // The app link has no QR to animate, and the provider answers 404
+            // for one, so the frames are asked for only on the QR surface.
+            { qrRefreshSeconds: useAppLink ? undefined : qrRefreshSeconds }
           );
         }
 

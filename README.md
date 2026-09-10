@@ -239,6 +239,14 @@ What the modal does:
 | **Language** | Ships its own copy in 39 locales (listed below). Pass `locale` and the modal matches the page it opened on; omit it and it follows the browser's preference list, English as the floor. Arabic, Hebrew and Urdu flip the dialog to RTL. |
 | **Accessibility** | `role="dialog"`, `aria-modal`, labelled by its title, focus moved in on open, scroll locked, visible focus rings, and a `prefers-reduced-motion` fallback. |
 
+The code on screen is not static. A QR sign-in shows one frame of a sequence
+the provider rotates every few seconds, and it refuses a frame the sequence has
+already moved past. That is what stops a code being relayed: a screenshot of a
+sign-in code, sent to someone else to scan and approve, is spent before it
+arrives, so the picture buys an attacker nothing. The SDK re-fetches the frame
+on the provider's cadence and the modal loads the next one before it swaps, so
+the code never blinks out while a camera is aimed at it.
+
 ### Languages
 
 Arabic · Bengali · Bosnian · Bulgarian · Chinese (Simplified) · Chinese (Traditional) ·
@@ -266,9 +274,12 @@ If you already have a design system you want the QR to live inside, opt out:
 ```
 
 `onPairingStateChange` then carries everything you need on every state:
-`qrUrl`, `pairUrl`, `status`, `expiresIn` and `cancel`. Render `qrUrl` in an
-`<img>`; do not draw your own. `PairingModal` is also exported if you want the
-real dialog but on your own terms.
+`qrUrl`, `pairUrl`, `status`, `expiresIn`, `qrRefreshSeconds` and `cancel`.
+Render `qrUrl` in an `<img>`; do not draw your own. Render it **on every state
+you are given**, never the first one you saw: `qrUrl` is a moving frame, the
+SDK hands you a new one every few seconds, and a UI that caches the first
+value shows a code that stops working. `PairingModal` is also exported if you
+want the real dialog but on your own terms.
 
 ## Scopes and claims
 

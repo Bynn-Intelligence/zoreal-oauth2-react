@@ -83,6 +83,36 @@ export function PairingModal({
   // job and the action has moved to the phone.
   const settled = state.status === 'claimed' || state.status === 'enrolling';
 
+  // The code on screen is a frame of a rotating sequence, so `qrUrl` arrives
+  // again every few seconds with a different value. Swapping an <img> src
+  // straight over blanks the well while the new image downloads, which on a
+  // three second cadence is a QR that flickers the whole time someone is
+  // trying to aim a camera at it. So the next frame is fetched into an
+  // off-document Image first and only becomes the visible src once it has
+  // decoded. A frame that fails to load is dropped without touching what is
+  // showing: the old code is still valid for a few more seconds, and the next
+  // refresh is another attempt.
+  const [frameUrl, setFrameUrl] = useState(qrUrl);
+  useEffect(() => {
+    // Once the phone has claimed the code the sequence is over and the well
+    // keeps the spent frame under its overlay.
+    if (settled || frameUrl === qrUrl) return;
+    let abandoned = false;
+    const next = new Image();
+    next.onload = () => {
+      if (!abandoned) setFrameUrl(qrUrl);
+    };
+    next.onerror = () => {
+      /* keep the frame that is showing; the next refresh retries */
+    };
+    next.src = qrUrl;
+    return () => {
+      abandoned = true;
+      next.onload = null;
+      next.onerror = null;
+    };
+  }, [qrUrl, settled, frameUrl]);
+
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
 
@@ -162,7 +192,7 @@ export function PairingModal({
           <p className={cx('body-text')}>{body}</p>
 
           <div className={cx('qr-well')}>
-            <img className={cx('qr')} data-spent={settled} src={qrUrl} alt={t.qrAlt} width={180} height={180} />
+            <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
             {settled && (
               <span className={cx('qr-overlay')}>
                 <span className={cx('qr-badge')}>
