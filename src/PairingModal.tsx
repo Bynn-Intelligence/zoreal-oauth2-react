@@ -191,15 +191,24 @@ export function PairingModal({
           </h2>
           <p className={cx('body-text')}>{body}</p>
 
-          <div className={cx('qr-well')}>
-            <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
-            {settled && (
-              <span className={cx('qr-overlay')}>
-                <span className={cx('qr-badge')}>
-                  <IconPhone />
+          {/* The ring around the well lives under it, so the well is wrapped;
+              the stylesheet says why it cannot be a pseudo-element of the well
+              itself. The wrapper carries the spent flag for the ring, because
+              a stylesheet cannot look up from the image to a ring beside it. */}
+          <div className={cx('qr-halo')} data-spent={settled}>
+            <span className={cx('qr-glow')} aria-hidden>
+              <span className={cx('qr-arc')} />
+            </span>
+            <div className={cx('qr-well')}>
+              <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
+              {settled && (
+                <span className={cx('qr-overlay')}>
+                  <span className={cx('qr-badge')}>
+                    <IconPhone />
+                  </span>
                 </span>
-              </span>
-            )}
+              )}
+            </div>
           </div>
 
           <div className={cx('status')}>
