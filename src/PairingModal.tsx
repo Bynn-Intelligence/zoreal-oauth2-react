@@ -191,24 +191,24 @@ export function PairingModal({
           </h2>
           <p className={cx('body-text')}>{body}</p>
 
-          {/* The ring around the well lives under it, so the well is wrapped;
-              the stylesheet says why it cannot be a pseudo-element of the well
-              itself. The wrapper carries the spent flag for the ring, because
-              a stylesheet cannot look up from the image to a ring beside it. */}
-          <div className={cx('qr-halo')} data-spent={settled}>
-            <span className={cx('qr-glow')} aria-hidden>
-              <span className={cx('qr-arc')} />
+          {/* The light on the well's edge is a set of masked overlays inside
+              the well, drawn first so the spent badge, a later sibling, stays
+              above them. The well carries the spent flag for them: a
+              stylesheet cannot look back from the image to a sibling before
+              it. */}
+          <div className={cx('qr-well')} data-spent={settled}>
+            <span className={cx('qr-beam-glow')} aria-hidden>
+              <span className={cx('qr-beam-glow-band')} />
             </span>
-            <div className={cx('qr-well')}>
-              <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
-              {settled && (
-                <span className={cx('qr-overlay')}>
-                  <span className={cx('qr-badge')}>
-                    <IconPhone />
-                  </span>
+            <span className={cx('qr-beam')} aria-hidden />
+            <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
+            {settled && (
+              <span className={cx('qr-overlay')}>
+                <span className={cx('qr-badge')}>
+                  <IconPhone />
                 </span>
-              )}
-            </div>
+              </span>
+            )}
           </div>
 
           <div className={cx('status')}>
