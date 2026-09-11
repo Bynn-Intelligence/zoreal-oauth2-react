@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useZorealOAuth, useZorealPairingHost } from './context';
 import { resolveIntent } from './intent';
+import {
+  forgetReturnFlow,
+  isReturnDone,
+  markReturnDone,
+  peekReturnFlow,
+  pendingReturnId,
+  returnToUrl,
+  saveReturnFlow,
+} from './return';
 import { unsafeClaims } from './jwt';
 import {
   FlowAbandonedError,
@@ -47,6 +56,9 @@ export interface ActivePairing {
   cancel: () => void;
 }
 
+/** Returns already taken up in this page load, so a second hook instance does not repeat one. */
+const resumedReturns = new Set<string>();
+
 interface FlowInternals {
   /** Non-null while a pairing is on screen. ZorealLogin renders from this. */
   pairing: ActivePairing | null;
@@ -89,6 +101,11 @@ export function useZorealFlow(options: InternalFlowOptions): {
   const abortRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  // Set by a cancel the person made (the dialog's close, its Cancel, Escape,
+  // a tap outside, its timeout), as opposed to the unmount. The abort that
+  // follows is then reported as `popup_closed`, so a button that went busy
+  // on the tap has something to recover on.
+  const closedByPerson = useRef(false);
 
   // A component unmounting mid-login must stop the poll: the provider cancels
   // over-polled requests, and an orphaned interval is exactly how one happens.
@@ -99,6 +116,67 @@ export function useZorealFlow(options: InternalFlowOptions): {
     },
     []
   );
+
+  // THE RETURN. When the ZOREAL ID app reopens the page after a same-device
+  // approval, the pairing is named in the fragment and the flow that started
+  // it is in local storage. This finishes it where the page stands, once per
+  // page load whichever hook instance mounts first, and reports through the
+  // same callbacks the tap would have.
+  useEffect(() => {
+    const id = pendingReturnId();
+    if (!id || resumedReturns.has(id)) return;
+    const saved = peekReturnFlow(id);
+    if (!saved || saved.clientId !== clientId) return;
+    forgetReturnFlow(id);
+    resumedReturns.add(id);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    void (async () => {
+      const opts = optionsRef.current;
+      try {
+        const code = await pollUntilApproved(issuer, id, undefined, controller.signal, {
+          tolerateUnknownUntil: Date.now() + 5_000,
+        });
+        if (saved.flow === 'auth-code') {
+          opts.onCode?.({
+            code,
+            scope: saved.scope,
+            app_state: saved.appState,
+            code_verifier: saved.verifier,
+            nonce: saved.nonce,
+          });
+        } else {
+          const tokens = await exchangeCode(issuer, {
+            code,
+            code_verifier: saved.verifier,
+            client_id: clientId,
+          });
+          const claims = unsafeClaims(tokens.id_token);
+          opts.onCredential?.({
+            credential: tokens.id_token,
+            clientId,
+            select_by: 'app_link',
+            acr: (claims.acr as AcrValue) ?? 'zoreal.device',
+          });
+        }
+        markReturnDone(id);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        if (e instanceof FlowAbandonedError) {
+          opts.onNonOAuthError?.(e.reason);
+          return;
+        }
+        if (e instanceof OAuthFlowError) {
+          opts.onError?.({ error: e.error, description: e.description });
+          return;
+        }
+        opts.onNonOAuthError?.({
+          type: 'unknown',
+          description: e instanceof Error ? e.message : String(e),
+        });
+      }
+    })();
+  }, [clientId, issuer]);
 
   const login = useCallback(() => {
     const opts = optionsRef.current;
@@ -124,6 +202,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
       try {
         let code: string;
         let selectBy: SelectBy = 'device';
+        let returnId: string | null = null;
 
         if (useAppLink) {
           // THE TAP IS THE NAVIGATION. Nothing is awaited between the click
@@ -137,6 +216,24 @@ export function useZorealFlow(options: InternalFlowOptions): {
           // there is no code to scan and the page is the button that was
           // tapped.
           const requestId = generateRequestId();
+          // The way back: the app reopens this page once the holder has
+          // approved, in a new tab, and the hook there finishes the sign-in
+          // from what is saved here. This tab keeps polling too; whichever
+          // finishes first marks the flow done and the other stands down.
+          saveReturnFlow({
+            v: 1,
+            issuer,
+            clientId,
+            flow,
+            verifier,
+            nonce,
+            state,
+            scope: opts.scope ?? 'openid',
+            appState: opts.app_state,
+            requestId,
+            createdAt: Date.now(),
+          });
+          returnId = requestId;
           const startUrl = sameDeviceStartUrl(issuer, {
             client_id: clientId,
             scope: opts.scope ?? 'openid',
@@ -150,9 +247,11 @@ export function useZorealFlow(options: InternalFlowOptions): {
             locale,
             request_id: requestId,
             origin: window.location.origin,
+            return_to: returnToUrl(),
           });
           selectBy = 'app_link';
           const cancel = () => {
+            closedByPerson.current = true;
             controller.abort();
             setPairing(null);
           };
@@ -180,6 +279,11 @@ export function useZorealFlow(options: InternalFlowOptions): {
             controller.signal,
             { tolerateUnknownUntil: Date.now() + 15_000 }
           );
+          if (isReturnDone(requestId)) {
+            // The page the app reopened has finished this sign-in. This tab
+            // was left behind; it stands down rather than spend a used code.
+            throw new DOMException('aborted', 'AbortError');
+          }
         } else {
         const started = await startPairing(issuer, {
           client_id: clientId,
@@ -206,6 +310,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
           const qrRefreshSeconds = qrRefreshSecondsOf(started);
 
           const cancel = () => {
+            closedByPerson.current = true;
             controller.abort();
             setPairing(null);
             publishRef.current?.(null);
@@ -277,6 +382,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
 
         setPairing(null);
         publishRef.current?.(null);
+        if (returnId) markReturnDone(returnId);
 
         if (flow === 'auth-code') {
           opts.onCode?.({
@@ -305,7 +411,16 @@ export function useZorealFlow(options: InternalFlowOptions): {
       } catch (e) {
         setPairing(null);
         publishRef.current?.(null);
-        if (e instanceof DOMException && e.name === 'AbortError') return;
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          if (closedByPerson.current) {
+            closedByPerson.current = false;
+            opts.onNonOAuthError?.({
+              type: 'popup_closed',
+              description: 'the sign-in dialog was closed before the holder approved',
+            });
+          }
+          return;
+        }
         if (e instanceof FlowAbandonedError) {
           opts.onNonOAuthError?.(e.reason);
           return;
