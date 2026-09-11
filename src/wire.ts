@@ -26,6 +26,11 @@
  *                                  code that gets scanned elsewhere. A request
  *                                  with no `display` gets the older static
  *                                  behaviour ("legacy").
+ *   GET  /pair/start               the same-device sign-in as a NAVIGATION:
+ *                                  the /pair parameters as a query, plus
+ *                                  request_id (the page's own token) and
+ *                                  origin; answered with a redirect to the
+ *                                  pairing's universal link, inside the tap
  *   GET  /pair/:id/status          poll: pending | claimed |
  *                                  approved (with code) | denied | expired |
  *                                  enrolling. Over-polling cancels the request

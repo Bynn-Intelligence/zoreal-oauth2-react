@@ -9,9 +9,16 @@ import {
   pollUntilApproved,
   qrRefreshSecondsOf,
   resolveDisplay,
+  sameDeviceStartUrl,
   startPairing,
 } from './pairing';
-import { challengeS256, generateState, generateVerifier } from './pkce';
+import {
+  challengeS256,
+  challengeS256Sync,
+  generateRequestId,
+  generateState,
+  generateVerifier,
+} from './pkce';
 import type {
   AcrValue,
   AuthCodeFlowOptions,
@@ -115,6 +122,65 @@ export function useZorealFlow(options: InternalFlowOptions): {
       const intent = resolveIntent(opts.intent, opts.scope, opts.acr_values);
 
       try {
+        let code: string;
+        let selectBy: SelectBy = 'device';
+
+        if (useAppLink) {
+          // THE TAP IS THE NAVIGATION. Nothing is awaited between the click
+          // and the assignment below: a browser hands a universal link to an
+          // app only inside a navigation the person began, and an await here
+          // would put the navigation outside it, where the link loads as a
+          // web page instead (see sameDeviceStartUrl). The provider creates
+          // the pairing and redirects to the link; the page stays and polls
+          // the token it chose, tolerating "no such pairing" for as long as
+          // the provider may still be answering the navigation. No modal:
+          // there is no code to scan and the page is the button that was
+          // tapped.
+          const requestId = generateRequestId();
+          const startUrl = sameDeviceStartUrl(issuer, {
+            client_id: clientId,
+            scope: opts.scope ?? 'openid',
+            state,
+            nonce,
+            code_challenge: challengeS256Sync(verifier),
+            redirect_uri: flow === 'auth-code' ? opts.redirect_uri : undefined,
+            acr_values: Array.isArray(opts.acr_values) ? opts.acr_values.join(' ') : opts.acr_values,
+            max_age: opts.max_age,
+            prompt: opts.prompt,
+            locale,
+            request_id: requestId,
+            origin: window.location.origin,
+          });
+          selectBy = 'app_link';
+          const cancel = () => {
+            controller.abort();
+            setPairing(null);
+          };
+          const surface = { pairUrl: startUrl, appLink: true, intent, cancel };
+          const active: ActivePairing = {
+            requestId,
+            pairUrl: startUrl,
+            qrUrl: '',
+            state: { status: 'pending', ...surface },
+            appLink: true,
+            cancel,
+          };
+          setPairing(active);
+          opts.onPairingStateChange?.(active.state);
+          window.location.assign(startUrl);
+
+          code = await pollUntilApproved(
+            issuer,
+            requestId,
+            (s) => {
+              const enriched = { ...s, ...surface };
+              setPairing((p) => (p && p.requestId === requestId ? { ...p, state: enriched } : p));
+              opts.onPairingStateChange?.(enriched);
+            },
+            controller.signal,
+            { tolerateUnknownUntil: Date.now() + 15_000 }
+          );
+        } else {
         const started = await startPairing(issuer, {
           client_id: clientId,
           scope: opts.scope ?? 'openid',
@@ -128,18 +194,15 @@ export function useZorealFlow(options: InternalFlowOptions): {
           max_age: opts.max_age,
           prompt: opts.prompt,
           locale,
-          display,
+          display: 'qr',
         });
-
-        let code: string;
-        let selectBy: SelectBy = 'device';
 
         if ('code' in started) {
           // prompt=none resolved silently: consented sector, live session.
           code = started.code;
           selectBy = 'session';
         } else {
-          selectBy = useAppLink ? 'app_link' : 'qr';
+          selectBy = 'qr';
           const qrRefreshSeconds = qrRefreshSecondsOf(started);
 
           const cancel = () => {
@@ -155,11 +218,10 @@ export function useZorealFlow(options: InternalFlowOptions): {
           // state would paste the first frame back on top of the current one.
           const surface = {
             pairUrl: started.pair_url,
-            appLink: useAppLink,
+            appLink: false,
             intent,
             cancel,
-            // The app link has no QR and therefore no cadence to report.
-            ...(useAppLink ? null : { qrRefreshSeconds }),
+            qrRefreshSeconds,
           };
           // The frame on screen. The poll replaces it every qrRefreshSeconds;
           // everything published in between reuses whatever is current, so the
@@ -170,7 +232,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
             pairUrl: surface.pairUrl,
             qrUrl,
             state: { status: 'pending', expiresIn: started.expires_in, qrUrl, ...surface },
-            appLink: useAppLink,
+            appLink: false,
             cancel,
           };
           setPairing(active);
@@ -207,10 +269,10 @@ export function useZorealFlow(options: InternalFlowOptions): {
               opts.onPairingStateChange?.(enriched);
             },
             controller.signal,
-            // The app link has no QR to animate, and the provider answers 404
-            // for one, so the frames are asked for only on the QR surface.
-            { qrRefreshSeconds: useAppLink ? undefined : qrRefreshSeconds }
+            { qrRefreshSeconds }
           );
+        }
+
         }
 
         setPairing(null);
