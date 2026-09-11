@@ -8,6 +8,7 @@ import {
   saveReturnFlow,
   forgetReturnFlow,
   peekReturnFlow,
+  visibleOrDone,
 } from '../src/return';
 
 const flow = (requestId: string, createdAt = Date.now()) => ({
@@ -64,6 +65,36 @@ describe('the way back', () => {
     forgetReturnFlow('E'.repeat(32));
     window.location.hash = '#zoreal_return=short';
     expect(pendingReturnId()).toBeNull();
+  });
+
+  it('lets a visible tab finish and makes a hidden one wait for the reopened page', async () => {
+    const id = 'F'.repeat(32);
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    expect(await visibleOrDone(id)).toBe(true);
+    markReturnDone(id);
+    expect(await visibleOrDone(id)).toBe(false);
+
+    const hidden = 'G'.repeat(32);
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    let settled: boolean | null = null;
+    void visibleOrDone(hidden).then((v) => (settled = v));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(settled).toBeNull();
+    // The reopened page finishes and says so through storage.
+    markReturnDone(hidden);
+    window.dispatchEvent(new StorageEvent('storage', { key: 'zoreal:oauth2:done:' + hidden }));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(settled).toBe(false);
+
+    // Or the person comes back by hand: the tab finishes.
+    const back = 'H'.repeat(32);
+    settled = null;
+    void visibleOrDone(back).then((v) => (settled = v));
+    await new Promise((r) => setTimeout(r, 10));
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(settled).toBe(true);
   });
 
   it('names this page without its fragment as the way back', () => {
