@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { cx, ensureStyles } from './styles';
 import type { ZorealTheme } from './types';
 
@@ -21,6 +21,15 @@ import type { ZorealTheme } from './types';
  * on the button's parent (`.card > button`) no longer matches. A site that
  * would rather draw its own busy state needs nothing from here.
  */
+/** How far the tail reaches behind the head, as a fraction of the outline. */
+const TAIL = 0.3;
+/* Layer n is n/N of the tail long and 1/n opaque. A point k/N of the way
+   back is covered by layers n >= k, and the product of their transparencies
+   telescopes to (k - 1)/N: a straight fade. Longest first, so the head paints
+   on top. The two shortest carry the head tint. */
+const STACK = Array.from({ length: 12 }, (_, i) => 12 - i);
+const HALO = [3, 2, 1];
+
 export function ZorealBusyRing({
   busy,
   radius = 8,
@@ -42,13 +51,47 @@ export function ZorealBusyRing({
   useEffect(() => {
     ensureStyles();
   }, []);
+  // The dash is sized as a fraction of the outline, so the outline's length
+  // is measured once laid out and again whenever the control changes size.
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const measureRef = useRef<SVGRectElement>(null);
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const rect = measureRef.current;
+    if (!wrap || !rect) return;
+    const measure = () => {
+      const length = rect.getTotalLength();
+      if (length > 0) wrap.style.setProperty('--zrl-ring-len', `${length}px`);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [radius]);
   // The outline runs 2px outside the control, so its corners are 2px larger.
   const rx = radius + 2;
-  const layer = (name: string) => (
-    <rect className={cx(name)} rx={rx} ry={rx} pathLength={100} />
+  // One dash of the stack: `len` of the outline long, ending at the shared
+  // head three tenths of the way round, `alpha` opaque.
+  const layer = (key: string, name: string, len: number, alpha: string, ref?: typeof measureRef) => (
+    <rect
+      key={key}
+      ref={ref}
+      className={cx(name)}
+      rx={rx}
+      ry={rx}
+      style={
+        {
+          strokeDasharray: `calc(var(--zrl-l) * ${len}) calc(var(--zrl-l) * ${1 - len})`,
+          '--zrl-s': `calc(var(--zrl-l) * ${-(TAIL - len)})`,
+          opacity: alpha,
+        } as CSSProperties
+      }
+    />
   );
   return (
     <span
+      ref={wrapRef}
       className={className ? `${cx('root')} ${cx('ring')} ${className}` : `${cx('root')} ${cx('ring')}`}
       data-theme={theme}
       data-busy={busy}
@@ -56,10 +99,10 @@ export function ZorealBusyRing({
     >
       {children}
       <svg className={cx('ring-svg')} aria-hidden="true">
-        {layer('ring-halo')}
-        {layer('ring-tail')}
-        {layer('ring-body')}
-        {layer('ring-head')}
+        {HALO.map((n, i) =>
+          layer(`h${n}`, 'ring-halo', (TAIL * n) / HALO.length, `calc(var(--zrl-glow-opacity) * 0.6 / ${n})`, i === 0 ? measureRef : undefined)
+        )}
+        {STACK.map((n) => layer(`t${n}`, n <= 2 ? 'ring-head' : 'ring-tail', (TAIL * n) / STACK.length, String(1 / n)))}
       </svg>
     </span>
   );
