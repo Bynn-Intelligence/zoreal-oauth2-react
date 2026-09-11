@@ -168,6 +168,11 @@ const sleep = (ms: number, signal?: AbortSignal) =>
     signal?.addEventListener('abort', onAbort, { once: true });
   });
 
+/** How long a same-device navigation is given to begin before the first poll. */
+const SETTLE_MS = 1500;
+/** Consecutive network failures a poll rides out before it is a failure. */
+const NETWORK_FAILURES_TOLERATED = 4;
+
 export interface PollOptions {
   /**
    * Same-device navigation only. The page starts polling while the
@@ -241,11 +246,36 @@ export async function pollUntilApproved(
     });
   };
 
+  const settlingUntil = options.tolerateUnknownUntil ?? 0;
+  let networkFailures = 0;
   try {
+    // Let a same-device navigation begin before the first poll, so the poll
+    // is not the request the navigation cancels.
+    if (settlingUntil > Date.now()) await sleep(SETTLE_MS, signal);
     for (;;) {
-      const response = await fetch(`${issuer}/pair/${encodeURIComponent(requestId)}/status`, {
-        signal,
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${issuer}/pair/${encodeURIComponent(requestId)}/status`, {
+          signal,
+        });
+        networkFailures = 0;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') throw e;
+      // A navigation cancels the page's requests while it is in flight, and
+      // the same-device sign-in IS a navigation: the first poll after the tap
+      // is killed by it (Safari reports "Load failed"), even though the tab
+      // stays once the app has taken the link. A network failure while the
+      // navigation settles is therefore not an outcome, and one in the
+      // background, on a phone that has just switched apps, seldom is either:
+      // only a run of them is.
+        networkFailures += 1;
+        if (settlingUntil > Date.now() || networkFailures <= NETWORK_FAILURES_TOLERATED) {
+          emit({ ...last, status: last.status });
+          await sleep(POLL_INTERVAL_MS, signal);
+          continue;
+        }
+        throw e;
+      }
       const body = (await parseJson(response)) as unknown as PairStatusResponse;
 
       if (response.status === 404 && (options.tolerateUnknownUntil ?? 0) > Date.now()) {
