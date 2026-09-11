@@ -1,9 +1,8 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { useZorealOAuth } from './context';
 import { strings } from './i18n';
 import { useZorealFlow } from './useZorealLogin';
 import { ZorealMark } from './mark';
-import { ZorealBusyRing } from './ring';
 import type {
   NonOAuthError,
   ZorealCodeResponse,
@@ -66,39 +65,18 @@ export function ZorealLogin(props: ZorealLoginProps) {
   const { locale } = useZorealOAuth();
   const label = TEXTS[text] ?? strings(locale).buttonContinue;
 
-  // Busy from the tap until the flow ends. On a phone the tap creates the
-  // pairing and then sends the tab to the app, one round trip later; the
-  // button is disabled and a light runs round it for that gap, so the tap is
-  // seen to have worked and cannot start a second pairing. On a computer it
-  // stays busy while the dialog is open. Never cleared by a navigation away:
-  // the page is gone with it.
-  const [busy, setBusy] = useState(false);
 
   const { login } = useZorealFlow({
     ...request,
     flow,
     onCredential:
       flow === 'browser-direct'
-        ? (r: ZorealCredentialResponse) => {
-            setBusy(false);
-            (onSuccess as (r: ZorealCredentialResponse) => void)(r);
-          }
+        ? (onSuccess as (r: ZorealCredentialResponse) => void)
         : undefined,
     onCode:
-      flow === 'auth-code'
-        ? (r: ZorealCodeResponse) => {
-            setBusy(false);
-            (onSuccess as unknown as (r: ZorealCodeResponse) => void)(r);
-          }
-        : undefined,
-    onError: (e) => {
-      setBusy(false);
-      onError?.({ type: 'unknown', description: e.description ?? e.error });
-    },
-    onNonOAuthError: (e: NonOAuthError) => {
-      setBusy(false);
-      onError?.(e);
-    },
+      flow === 'auth-code' ? (onSuccess as unknown as (r: ZorealCodeResponse) => void) : undefined,
+    onError: (e) => onError?.({ type: 'unknown', description: e.description ?? e.error }),
+    onNonOAuthError: (e: NonOAuthError) => onError?.(e),
   });
 
   const s = SIZES[size];
@@ -131,23 +109,21 @@ export function ZorealLogin(props: ZorealLoginProps) {
 
   return (
     <div {...containerProps}>
-      <ZorealBusyRing busy={busy} radius={radius} theme={theme === 'outline' ? 'auto' : 'light'}>
-        <button
-          type="button"
-          style={busy ? { ...style, cursor: 'progress' } : style}
-          disabled={busy}
-          aria-busy={busy}
-          onClick={() => {
-            if (busy) return;
-            click_listener?.();
-            setBusy(true);
-            login();
-          }}
-        >
-          <ZorealMark size={s.mark} brand={brandMark} />
-          {type === 'standard' && label}
-        </button>
-      </ZorealBusyRing>
+      {/* The click goes through to the flow with the event: the flow takes
+          this button from it, holds it busy with the pairing light round it
+          until the login ends, and lets it go on every outcome. The same
+          thing a site's own button gets from onClick={login}. */}
+      <button
+        type="button"
+        style={style}
+        onClick={(event) => {
+          click_listener?.();
+          login(event);
+        }}
+      >
+        <ZorealMark size={s.mark} brand={brandMark} />
+        {type === 'standard' && label}
+      </button>
     </div>
   );
 }
