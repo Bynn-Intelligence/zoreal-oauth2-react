@@ -62,7 +62,7 @@
  */
 
 export const WIRE_VERSION = 1;
-export const SDK_VERSION = '0.2.17';
+export const SDK_VERSION = '0.2.18';
 export const DEFAULT_ISSUER = 'https://id.zoreal.com';
 
 /** Pending TTL is short. Poll gently; over-polling cancels the request. */
