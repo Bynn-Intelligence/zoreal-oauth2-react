@@ -148,6 +148,28 @@ scans the QR with their phone and approves in the ZOREAL ID app. On a phone it
 skips the QR and opens the app directly. Either way your page just receives
 `onSuccess`.
 
+### What it looks like
+
+The default: the mark in the brand blue, the label in the page's font, a 12px
+corner. `shape="pill"`, `theme="filled_black"` and `text="verify_with"` are the
+other shapes and words it takes.
+
+<p>
+  <img src="docs/buttons/continue-with-zoreal.svg" alt="Continue with ZOREAL" height="62">
+  <img src="docs/buttons/verify-with-zoreal-id-pill.svg" alt="Verify with ZOREAL ID, pill" height="62">
+  <img src="docs/buttons/sign-in-with-zoreal-black.svg" alt="Sign in with ZOREAL, black" height="62">
+</p>
+
+While the tap is being answered, on a phone between the tap and the hand-over
+to the app, the button is disabled and the pairing modal's light runs round it:
+
+<p>
+  <img src="docs/buttons/continue-with-zoreal-busy.svg" alt="Continue with ZOREAL, busy" height="82">
+</p>
+
+A site that renders its own button can wrap it in `ZorealBusyRing` for the
+same light; see [the pairing modal](#the-pairing-modal), **Mobile**.
+
 ### On your backend
 
 There is a sibling library for every major backend — use one instead of
@@ -229,7 +251,7 @@ What the modal does:
 
 | | |
 | --- | --- |
-| **Mobile** | No QR. The modal opens on the tap with the light running while the pairing is created, then offers an **Open ZOREAL ID** button: a real link, because a browser hands a link to an app only from a tap, never from a script. It opens in a new tab so the polling tab stays put; with no app installed the same link is the page that installs it. Force one or the other with `display: 'qr'` / `'link'`. |
+| **Mobile** | No QR and no modal. The SDK creates the pairing and sends the tab to the pairing link, which the ZOREAL ID app claims; with no app installed the same link is the page that installs it. That is one round trip after the tap: `ZorealLogin` disables itself and runs a light round its edge for that gap; a site with its own button keeps that button and draws its own busy state from the tap until `onSuccess` or `onError` fires, or wraps it in `ZorealBusyRing` to get the same light (a wrapper: pass `block` for a full-width button, keep `overflow: hidden` off its ancestors, and expect `.parent > button` selectors to stop matching). Force one or the other with `display: 'qr'` / `'link'`. |
 | **Live status** | The copy and the title follow the pairing: waiting for a scan, then waiting for approval once the holder has claimed the code (the spent QR blurs out behind a phone glyph). |
 | **Title** | Says what the scan is for, inferred from the request: "Scan to sign in" for `openid`, `email` and `profile.name`; "Scan to verify your identity" once a document attribute such as `zoreal.age` or `profile.birthdate` is requested; "Scan to prove you are a real human" for `openid` alone with `acr_values: 'zoreal.live'`. Override with `intent`, one of `'sign-in'`, `'identify'`, `'presence'`, when the scope does not say. |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |

@@ -1,6 +1,7 @@
 export { ZorealOAuthProvider, useZorealOAuth } from './context';
 export type { ZorealOAuthProviderProps, ZorealOAuthContextProps } from './context';
 export { ZorealLogin } from './ZorealLogin';
+export { ZorealBusyRing } from './ring';
 // Exported so an integrator on `pairingUI: 'none'` can still mount the real
 // dialog (driven by their own `onPairingStateChange`) rather than rebuild it.
 export { PairingModal, DEFAULT_PAIRING_TIMEOUT_MS } from './PairingModal';

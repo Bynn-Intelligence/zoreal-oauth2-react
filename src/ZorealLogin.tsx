@@ -1,8 +1,9 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useZorealOAuth } from './context';
 import { strings } from './i18n';
 import { useZorealFlow } from './useZorealLogin';
 import { ZorealMark } from './mark';
+import { ZorealBusyRing } from './ring';
 import type {
   NonOAuthError,
   ZorealCodeResponse,
@@ -36,10 +37,13 @@ const TEXTS: Record<NonNullable<ZorealLoginProps['text']>, string | null> = {
   verify_with: 'Verify with ZOREAL ID',
 };
 
+/* The house button: 14px medium text, a 22px mark, 12px between them, 14px
+   above and below, 20px at the sides, 12px corners. The smaller sizes scale
+   that down; they do not change its proportions. */
 const SIZES = {
-  large: { height: 44, font: 15, pad: 20 },
-  medium: { height: 38, font: 14, pad: 16 },
-  small: { height: 32, font: 12, pad: 12 },
+  large: { height: 50, font: 14, pad: 20, mark: 22, gap: 12, radius: 12 },
+  medium: { height: 42, font: 14, pad: 16, mark: 20, gap: 10, radius: 10 },
+  small: { height: 34, font: 12, pad: 12, mark: 16, gap: 8, radius: 8 },
 } as const;
 
 export function ZorealLogin(props: ZorealLoginProps) {
@@ -48,11 +52,11 @@ export function ZorealLogin(props: ZorealLoginProps) {
     onError,
     containerProps,
     type = 'standard',
-    theme = 'filled',
+    theme = 'outline',
     size = 'large',
     text = 'continue_with',
     shape = 'rectangular',
-    logo_alignment = 'left',
+    logo_alignment = 'center',
     width,
     click_listener,
     flow = 'browser-direct',
@@ -62,26 +66,52 @@ export function ZorealLogin(props: ZorealLoginProps) {
   const { locale } = useZorealOAuth();
   const label = TEXTS[text] ?? strings(locale).buttonContinue;
 
+  // Busy from the tap until the flow ends. On a phone the tap creates the
+  // pairing and then sends the tab to the app, one round trip later; the
+  // button is disabled and a light runs round it for that gap, so the tap is
+  // seen to have worked and cannot start a second pairing. On a computer it
+  // stays busy while the dialog is open. Never cleared by a navigation away:
+  // the page is gone with it.
+  const [busy, setBusy] = useState(false);
+
   const { login } = useZorealFlow({
     ...request,
     flow,
     onCredential:
       flow === 'browser-direct'
-        ? (onSuccess as (r: ZorealCredentialResponse) => void)
+        ? (r: ZorealCredentialResponse) => {
+            setBusy(false);
+            (onSuccess as (r: ZorealCredentialResponse) => void)(r);
+          }
         : undefined,
     onCode:
-      flow === 'auth-code' ? (onSuccess as unknown as (r: ZorealCodeResponse) => void) : undefined,
-    onError: (e) => onError?.({ type: 'unknown', description: e.description ?? e.error }),
-    onNonOAuthError: (e: NonOAuthError) => onError?.(e),
+      flow === 'auth-code'
+        ? (r: ZorealCodeResponse) => {
+            setBusy(false);
+            (onSuccess as unknown as (r: ZorealCodeResponse) => void)(r);
+          }
+        : undefined,
+    onError: (e) => {
+      setBusy(false);
+      onError?.({ type: 'unknown', description: e.description ?? e.error });
+    },
+    onNonOAuthError: (e: NonOAuthError) => {
+      setBusy(false);
+      onError?.(e);
+    },
   });
 
   const s = SIZES[size];
+  const radius = shape === 'pill' ? s.height / 2 : shape === 'square' ? 4 : s.radius;
+  // The mark keeps the brand blue wherever it can be seen. On the brand-blue
+  // filled button it cannot, so there it takes the label's white.
+  const brandMark = theme !== 'filled';
   const style: CSSProperties = useMemo(
     () => ({
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: logo_alignment === 'center' ? 'center' : 'flex-start',
-      gap: 10,
+      gap: s.gap,
       height: s.height,
       padding: `0 ${s.pad}px`,
       width,
@@ -89,29 +119,35 @@ export function ZorealLogin(props: ZorealLoginProps) {
       fontFamily: 'inherit',
       fontWeight: 500,
       cursor: 'pointer',
-      borderRadius: shape === 'pill' ? s.height / 2 : shape === 'square' ? 4 : 8,
+      borderRadius: radius,
       ...(theme === 'outline'
-        ? { background: 'transparent', color: 'inherit', border: '1px solid rgba(128,128,128,0.5)' }
+        ? { background: '#ffffff', color: '#16181c', border: '1px solid #e2e4de' }
         : theme === 'filled_black'
           ? { background: '#111', color: '#fff', border: '1px solid #111' }
           : { background: '#00b4d9', color: '#fff', border: '1px solid #00b4d9' }),
     }),
-    [logo_alignment, s, shape, theme, width]
+    [logo_alignment, s, radius, theme, width]
   );
 
   return (
     <div {...containerProps}>
-      <button
-        type="button"
-        style={style}
-        onClick={() => {
-          click_listener?.();
-          login();
-        }}
-      >
-        <ZorealMark size={Math.round(s.font * 1.25)} />
-        {type === 'standard' && label}
-      </button>
+      <ZorealBusyRing busy={busy} radius={radius} theme={theme === 'outline' ? 'auto' : 'light'}>
+        <button
+          type="button"
+          style={busy ? { ...style, cursor: 'progress' } : style}
+          disabled={busy}
+          aria-busy={busy}
+          onClick={() => {
+            if (busy) return;
+            click_listener?.();
+            setBusy(true);
+            login();
+          }}
+        >
+          <ZorealMark size={s.mark} brand={brandMark} />
+          {type === 'standard' && label}
+        </button>
+      </ZorealBusyRing>
     </div>
   );
 }
