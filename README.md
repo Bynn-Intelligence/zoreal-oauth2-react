@@ -89,41 +89,76 @@ import { ZorealOAuthProvider } from '@zoreal/oauth2-react';
 ```
 
 ```tsx
-// ZorealSignIn.tsx
-import { useZorealLogin } from '@zoreal/oauth2-react';
+// ZorealSignIn.tsx — your own button, the way a production sign-in page uses it.
+import { useState } from 'react';
+import { useZorealLogin, ZorealBusyRing, ZorealMark } from '@zoreal/oauth2-react';
 
-function ZorealSignIn() {
+function ZorealSignIn({ onSignedIn }: { onSignedIn: () => void }) {
+  // Busy from the tap until the flow ends. On a computer that is while the
+  // pairing modal is open; on a phone it is the moment between the tap and
+  // the hand-over to the ZOREAL ID app. Cleared by every outcome below.
+  const [busy, setBusy] = useState(false);
+
   // `email` (and profile.name, etc.) are returned from /userinfo on your backend.
   const login = useZorealLogin({
     flow: 'auth-code',
     scope: 'openid email profile.name',
     onSuccess: async ({ code, code_verifier, nonce }) => {
+      setBusy(false);
       // Send ALL THREE to your backend over TLS. It calls POST /token with the
       // code and verifier plus its client authentication, verifies the ID
       // token's nonce is this one, then reads the email and name from
       // /userinfo. That is where personal data is delivered.
-      await fetch('/api/auth/zoreal', {
+      const res = await fetch('/api/auth/zoreal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, code_verifier, nonce }),
       });
+      if (res.ok) onSignedIn();
     },
-    onError: (e) => console.error(e.description ?? e.error),
+    onError: (e) => {
+      setBusy(false);
+      console.error(e.description ?? e.error);
+    },
     onNonOAuthError: (e) => {
-      // The holder closing or ignoring the request is not an error to surface.
-      if (e.type === 'request_denied' || e.type === 'request_expired') return;
+      setBusy(false);
+      // The holder declining or ignoring the request, or closing the dialog,
+      // is not an error to surface: the button is simply ready again.
+      if (e.type === 'request_denied' || e.type === 'request_expired' || e.type === 'popup_closed') return;
       console.error(e.description ?? e.type);
     },
   });
 
-  return <button onClick={login}>Continue with ZOREAL</button>;
+  return (
+    // The wrapper runs the pairing modal's light around the button while busy.
+    // `block` because this button fills its row; `radius` is the button's own.
+    <ZorealBusyRing busy={busy} radius={12} block>
+      <button
+        type="button"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={() => {
+          if (busy) return;
+          setBusy(true);
+          login(); // from the click handler itself: on a phone this tap is the navigation
+        }}
+      >
+        <ZorealMark size={22} brand />
+        Continue with ZOREAL
+      </button>
+    </ZorealBusyRing>
+  );
 }
 ```
 
-That is the whole integration. When `login()` runs, the provider puts the
-pairing modal on screen; on a phone it skips the QR and opens the ZOREAL ID
-app instead. See [The pairing modal](#the-pairing-modal) for what it does and
-how to theme, translate, time out or replace it.
+That is the whole integration. When `login()` runs on a computer, the provider
+puts the pairing modal on screen. On a phone the tap itself navigates to the
+provider, which opens the ZOREAL ID app; once the person has approved, the app
+brings them back to this page, and the same hook finishes the sign-in and calls
+your `onSuccess` there. So mount this component on the page the sign-in starts
+from, and expect `onSuccess` on a fresh page load. See
+[The pairing modal](#the-pairing-modal) for what it does and how to theme,
+translate, time out or replace it.
 
 ## Quick start: the button (no backend, pseudonymous)
 
@@ -577,28 +612,28 @@ error path.
 
 ## A complete example
 
-A full sign-in component, end to end — the shape a real auth-code integration
-takes. It renders the button, renders its own pairing UI (the hook renders
-none), hands `{ code, code_verifier, nonce }` to your backend on success, and
-treats the decline/expiry path as the non-events they are.
+A full sign-in component, end to end, the shape a production auth-code
+integration takes: your own button, busy from the tap until the flow ends,
+the SDK's pairing modal on a computer and the app hand-over on a phone,
+`{ code, code_verifier, nonce }` to your backend on success, the human outcomes
+treated as the non-events they are, and the return from the app on a phone
+handled by the same hook.
 
 ```tsx
 import { useState } from 'react';
-import { ZorealOAuthProvider, useZorealLogin } from '@zoreal/oauth2-react';
-import type { PairingState } from '@zoreal/oauth2-react';
+import { ZorealOAuthProvider, useZorealLogin, ZorealBusyRing, ZorealMark } from '@zoreal/oauth2-react';
 
 function ZorealSignIn() {
-  const [pairing, setPairing] = useState<PairingState | null>(null);
+  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   const login = useZorealLogin({
     flow: 'auth-code',
     scope: 'openid email profile.name',
     // acr_values: 'zoreal.live',  // request a fresh liveness for a step-up / high-value login
-    onPairingStateChange: setPairing,
 
     onSuccess: async ({ code, code_verifier, nonce }) => {
-      setPairing(null);
+      setBusy(false);
       // Post ALL THREE to YOUR backend over TLS. Your backend does the /token
       // exchange with its client authentication, verifies the ID token
       // (ES256 against the JWKS, iss/aud/exp, and this nonce), checks the acr
@@ -620,37 +655,38 @@ function ZorealSignIn() {
 
     // An OAuth error from the provider (e.g. a scope not on your allow list).
     onError: (e) => {
-      setPairing(null);
+      setBusy(false);
       setNote(e.description ?? e.error); // the provider's words, verbatim
     },
 
-    // The human outcomes: declined, expired, cancelled. Not faults — clear the
-    // pairing UI and let them try again. Do not alarm on these.
+    // The human outcomes: declined, expired, the dialog closed. Not faults:
+    // the button is ready again. Do not alarm on these.
     onNonOAuthError: (e) => {
-      setPairing(null);
+      setBusy(false);
       if (e.type === 'request_denied') setNote('Login was declined. Try again when ready.');
       else if (e.type === 'request_expired') setNote('That took too long. Try again.');
+      else if (e.type === 'popup_closed') setNote(null);
       else setNote('Something went wrong. Try again.');
     },
   });
 
   return (
     <div>
-      <button onClick={login}>Continue with ZOREAL</button>
-
-      {/* The hook renders nothing, so the pairing UI is yours. On desktop the
-          login cannot complete until something shows pairing.qrUrl to scan. */}
-      {pairing && !pairing.appLink && ['pending', 'claimed'].includes(pairing.status) && (
-        <div role="dialog" aria-label="Log in with ZOREAL">
-          <img src={pairing.qrUrl} alt="Log in with ZOREAL" width={200} height={200} />
-          <p>
-            {pairing.status === 'claimed'
-              ? 'Approve the login in your ZOREAL ID app.'
-              : 'Scan with your phone camera or the ZOREAL ID app.'}
-          </p>
-          <button onClick={pairing.cancel}>Cancel</button>
-        </div>
-      )}
+      <ZorealBusyRing busy={busy} radius={12} block>
+        <button
+          type="button"
+          disabled={busy}
+          aria-busy={busy}
+          onClick={() => {
+            if (busy) return;
+            setBusy(true);
+            login();
+          }}
+        >
+          <ZorealMark size={22} brand />
+          Continue with ZOREAL
+        </button>
+      </ZorealBusyRing>
 
       {note && <p role="status">{note}</p>}
     </div>
@@ -659,12 +695,19 @@ function ZorealSignIn() {
 
 export default function App() {
   return (
-    <ZorealOAuthProvider clientId="ast_your_asset_id">
+    <ZorealOAuthProvider clientId="ast_your_asset_id" locale="en" theme="auto">
       <ZorealSignIn />
     </ZorealOAuthProvider>
   );
 }
 ```
+
+On a computer the provider renders the pairing modal for this button; nothing
+here draws a QR. To draw your own instead, see
+[Rendering it yourself](#rendering-it-yourself). On a phone there is no dialog:
+the tap navigates to the provider, the ZOREAL ID app opens, and after the
+approval the app reopens this page, where `useZorealLogin` finishes the sign-in
+and `onSuccess` runs on that fresh page load.
 
 **The backend must verify.** This component only starts the flow and forwards a
 code; on its own it proves nothing. The security is your backend exchanging the
