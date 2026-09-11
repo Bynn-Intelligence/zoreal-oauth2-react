@@ -241,10 +241,10 @@ export function PairingModal({
           <button type="button" className={cx('cancel')} onClick={onCancel}>
             {t.cancel}
           </button>
-          <p className={cx('secured')}>
+          <a className={cx('secured')} href="https://zoreal.com" target="_blank" rel="noopener">
             <IconShield />
             {t.secured}
-          </p>
+          </a>
         </div>
       </div>
     </div>,
