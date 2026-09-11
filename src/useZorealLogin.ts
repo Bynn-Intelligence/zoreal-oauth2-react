@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useZorealOAuth, useZorealPairingHost } from './context';
+import { controlFrom, holdBusy } from './busy';
 import { resolveIntent } from './intent';
 import {
   forgetReturnFlow,
@@ -87,7 +88,7 @@ export interface InternalFlowOptions extends ZorealLoginRequestOptions {
  * does the exchange with its client authentication.
  */
 export function useZorealFlow(options: InternalFlowOptions): {
-  login: () => void;
+  login: (event?: unknown) => void;
   internals: FlowInternals;
 } {
   const { clientId, issuer, locale } = useZorealOAuth();
@@ -113,6 +114,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
     () => () => {
       abortRef.current?.abort();
       publishRef.current?.(null);
+      releaseRef.current();
     },
     []
   );
@@ -178,10 +180,21 @@ export function useZorealFlow(options: InternalFlowOptions): {
     })();
   }, [clientId, issuer]);
 
-  const login = useCallback(() => {
+  // The site's control, held busy for the whole login: taken from the click
+  // event `login` is called with, let go on every exit and on unmount.
+  const releaseRef = useRef<() => void>(() => {});
+
+  const login = useCallback((event?: unknown) => {
     const opts = optionsRef.current;
+    const control = controlFrom(event);
     const run = async () => {
       abortRef.current?.abort();
+      releaseRef.current();
+      releaseRef.current = control ? holdBusy(control) : () => {};
+      const release = () => {
+        releaseRef.current();
+        releaseRef.current = () => {};
+      };
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -384,6 +397,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
         publishRef.current?.(null);
         if (returnId) markReturnDone(returnId);
 
+        release();
         if (flow === 'auth-code') {
           opts.onCode?.({
             code,
@@ -409,6 +423,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
         };
         opts.onCredential?.(response);
       } catch (e) {
+        release();
         setPairing(null);
         publishRef.current?.(null);
         if (e instanceof DOMException && e.name === 'AbortError') {
@@ -443,8 +458,10 @@ export function useZorealFlow(options: InternalFlowOptions): {
 
 export function useZorealLogin(
   options: { flow?: 'browser-direct' } & BrowserDirectFlowOptions
-): () => void;
-export function useZorealLogin(options: { flow: 'auth-code' } & AuthCodeFlowOptions): () => void;
+): (event?: unknown) => void;
+export function useZorealLogin(
+  options: { flow: 'auth-code' } & AuthCodeFlowOptions
+): (event?: unknown) => void;
 export function useZorealLogin(
   options: ({ flow?: 'browser-direct' | 'auth-code' } & ZorealLoginRequestOptions) &
     Partial<Pick<AuthCodeFlowOptions, 'redirect_uri' | 'ux_mode'>> & {
@@ -452,7 +469,7 @@ export function useZorealLogin(
       onError?: (error: Pick<NonOAuthError, 'description'> & { error: ErrorCode }) => void;
       onNonOAuthError?: (error: NonOAuthError) => void;
     }
-): () => void {
+): (event?: unknown) => void {
   if (options.ux_mode === 'redirect') {
     // v1 supports the popup shape only: the code and PKCE verifier go to your
     // onSuccess and from there to your backend over TLS. A redirect would have

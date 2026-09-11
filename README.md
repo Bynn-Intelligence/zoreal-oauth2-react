@@ -89,22 +89,15 @@ import { ZorealOAuthProvider } from '@zoreal/oauth2-react';
 ```
 
 ```tsx
-// ZorealSignIn.tsx — your own button, the way a production sign-in page uses it.
-import { useState } from 'react';
-import { useZorealLogin, ZorealBusyRing, ZorealMark } from '@zoreal/oauth2-react';
+// ZorealSignIn.tsx — your own button, styled your way.
+import { useZorealLogin, ZorealMark } from '@zoreal/oauth2-react';
 
 function ZorealSignIn({ onSignedIn }: { onSignedIn: () => void }) {
-  // Busy from the tap until the flow ends. On a computer that is while the
-  // pairing modal is open; on a phone it is the moment between the tap and
-  // the hand-over to the ZOREAL ID app. Cleared by every outcome below.
-  const [busy, setBusy] = useState(false);
-
   // `email` (and profile.name, etc.) are returned from /userinfo on your backend.
   const login = useZorealLogin({
     flow: 'auth-code',
     scope: 'openid email profile.name',
     onSuccess: async ({ code, code_verifier, nonce }) => {
-      setBusy(false);
       // Send ALL THREE to your backend over TLS. It calls POST /token with the
       // code and verifier plus its client authentication, verifies the ID
       // token's nonce is this one, then reads the email and name from
@@ -116,12 +109,8 @@ function ZorealSignIn({ onSignedIn }: { onSignedIn: () => void }) {
       });
       if (res.ok) onSignedIn();
     },
-    onError: (e) => {
-      setBusy(false);
-      console.error(e.description ?? e.error);
-    },
+    onError: (e) => console.error(e.description ?? e.error),
     onNonOAuthError: (e) => {
-      setBusy(false);
       // The holder declining or ignoring the request, or closing the dialog,
       // is not an error to surface: the button is simply ready again.
       if (e.type === 'request_denied' || e.type === 'request_expired' || e.type === 'popup_closed') return;
@@ -129,36 +118,26 @@ function ZorealSignIn({ onSignedIn }: { onSignedIn: () => void }) {
     },
   });
 
+  // Pass the click through as it is. The SDK takes the button from it, holds it
+  // busy with the pairing modal's light round it until the login ends, and lets
+  // it go on every outcome. No wrapper, no busy state of your own.
   return (
-    // The wrapper runs the pairing modal's light around the button while busy.
-    // `block` because this button fills its row; `radius` is the button's own.
-    <ZorealBusyRing busy={busy} radius={12} block>
-      <button
-        type="button"
-        disabled={busy}
-        aria-busy={busy}
-        onClick={() => {
-          if (busy) return;
-          setBusy(true);
-          login(); // from the click handler itself: on a phone this tap is the navigation
-        }}
-      >
-        <ZorealMark size={22} brand />
-        Continue with ZOREAL
-      </button>
-    </ZorealBusyRing>
+    <button type="button" onClick={login}>
+      <ZorealMark size={22} brand />
+      Continue with ZOREAL
+    </button>
   );
 }
 ```
 
 That is the whole integration. When `login()` runs on a computer, the provider
-puts the pairing modal on screen. On a phone the tap itself navigates to the
-provider, which opens the ZOREAL ID app; once the person has approved, the app
-brings them back to this page, and the same hook finishes the sign-in and calls
-your `onSuccess` there. So mount this component on the page the sign-in starts
-from, and expect `onSuccess` on a fresh page load. See
-[The pairing modal](#the-pairing-modal) for what it does and how to theme,
-translate, time out or replace it.
+puts the pairing modal on screen and the button you tapped waits, disabled, with
+the light round it. On a phone the tap itself navigates to the provider, which
+opens the ZOREAL ID app; once the person has approved, the app brings them back
+to this page, and the same hook finishes the sign-in and calls your `onSuccess`
+there. So mount this component on the page the sign-in starts from, and expect
+`onSuccess` on a fresh page load. See [The pairing modal](#the-pairing-modal)
+for what it does and how to theme, translate, time out or replace it.
 
 ## Quick start: the button (no backend, pseudonymous)
 
@@ -286,7 +265,7 @@ What the modal does:
 
 | | |
 | --- | --- |
-| **Mobile** | No QR and no modal. The tap itself is a navigation: the SDK sends the tab to the provider's `/pair/start` with the pairing's parameters, synchronously from the click, and the provider answers with a redirect to the pairing's universal link, which the ZOREAL ID app claims while the page stays put and polls. A browser hands a link to an app only inside a navigation the person began, which is why nothing is fetched first. With no app installed the same redirect lands on the page that installs it. Call `login()` from the click handler itself: `ZorealLogin` does, disables itself and runs a light round its edge until the flow ends. Once the holder has approved, the app reopens your page with the pairing named in the fragment, and the first `useZorealLogin` or `ZorealLogin` on that page finishes the sign-in there, through the same `onSuccess` and `onError`; the tab that was left behind stands down when the returned page finishes first; a site with its own button keeps that button and draws its own busy state from the tap until `onSuccess` or `onError` fires, or wraps it in `ZorealBusyRing` to get the same light (a wrapper: pass `block` for a full-width button, keep `overflow: hidden` off its ancestors, and expect `.parent > button` selectors to stop matching). Force one or the other with `display: 'qr'` / `'link'`. |
+| **Mobile** | No QR and no modal. The tap itself is a navigation: the SDK sends the tab to the provider's `/pair/start` with the pairing's parameters, synchronously from the click, and the provider answers with a redirect to the pairing's universal link, which the ZOREAL ID app claims while the page stays put and polls. A browser hands a link to an app only inside a navigation the person began, which is why nothing is fetched first. With no app installed the same redirect lands on the page that installs it. Pass the click event through to `login` (`onClick={login}`): the SDK takes the button from it, disables it and runs the light round it until the flow ends, then lets it go, on every outcome. `ZorealLogin` does the same for itself. Once the holder has approved, the app reopens your page with the pairing named in the fragment, and the first `useZorealLogin` or `ZorealLogin` on that page finishes the sign-in there, through the same `onSuccess` and `onError`; the tab that was left behind stands down when the returned page finishes first; a site with its own button gets the same by passing the click to `login`; `ZorealBusyRing` remains for a site that wants to drive the light itself (a wrapper: pass `block` for a full-width button, keep `overflow: hidden` off its ancestors, and expect `.parent > button` selectors to stop matching). Force one or the other with `display: 'qr'` / `'link'`. |
 | **Live status** | The copy and the title follow the pairing: waiting for a scan, then waiting for approval once the holder has claimed the code (the spent QR blurs out behind a phone glyph). |
 | **Title** | Says what the scan is for, inferred from the request: "Scan to sign in" for `openid`, `email` and `profile.name`; "Scan to verify your identity" once a document attribute such as `zoreal.age` or `profile.birthdate` is requested; "Scan to prove you are a real human" for `openid` alone with `acr_values: 'zoreal.live'`. Override with `intent`, one of `'sign-in'`, `'identify'`, `'presence'`, when the scope does not say. |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
@@ -613,18 +592,17 @@ error path.
 ## A complete example
 
 A full sign-in component, end to end, the shape a production auth-code
-integration takes: your own button, busy from the tap until the flow ends,
-the SDK's pairing modal on a computer and the app hand-over on a phone,
-`{ code, code_verifier, nonce }` to your backend on success, the human outcomes
-treated as the non-events they are, and the return from the app on a phone
-handled by the same hook.
+integration takes: your own button, held busy by the SDK from the tap until
+the flow ends, the SDK's pairing modal on a computer and the app hand-over on
+a phone, `{ code, code_verifier, nonce }` to your backend on success, the human
+outcomes treated as the non-events they are, and the return from the app on a
+phone handled by the same hook.
 
 ```tsx
 import { useState } from 'react';
-import { ZorealOAuthProvider, useZorealLogin, ZorealBusyRing, ZorealMark } from '@zoreal/oauth2-react';
+import { ZorealOAuthProvider, useZorealLogin, ZorealMark } from '@zoreal/oauth2-react';
 
 function ZorealSignIn() {
-  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   const login = useZorealLogin({
@@ -633,7 +611,6 @@ function ZorealSignIn() {
     // acr_values: 'zoreal.live',  // request a fresh liveness for a step-up / high-value login
 
     onSuccess: async ({ code, code_verifier, nonce }) => {
-      setBusy(false);
       // Post ALL THREE to YOUR backend over TLS. Your backend does the /token
       // exchange with its client authentication, verifies the ID token
       // (ES256 against the JWKS, iss/aud/exp, and this nonce), checks the acr
@@ -654,15 +631,11 @@ function ZorealSignIn() {
     },
 
     // An OAuth error from the provider (e.g. a scope not on your allow list).
-    onError: (e) => {
-      setBusy(false);
-      setNote(e.description ?? e.error); // the provider's words, verbatim
-    },
+    onError: (e) => setNote(e.description ?? e.error), // the provider's words, verbatim
 
     // The human outcomes: declined, expired, the dialog closed. Not faults:
     // the button is ready again. Do not alarm on these.
     onNonOAuthError: (e) => {
-      setBusy(false);
       if (e.type === 'request_denied') setNote('Login was declined. Try again when ready.');
       else if (e.type === 'request_expired') setNote('That took too long. Try again.');
       else if (e.type === 'popup_closed') setNote(null);
@@ -672,21 +645,12 @@ function ZorealSignIn() {
 
   return (
     <div>
-      <ZorealBusyRing busy={busy} radius={12} block>
-        <button
-          type="button"
-          disabled={busy}
-          aria-busy={busy}
-          onClick={() => {
-            if (busy) return;
-            setBusy(true);
-            login();
-          }}
-        >
-          <ZorealMark size={22} brand />
-          Continue with ZOREAL
-        </button>
-      </ZorealBusyRing>
+      {/* The click goes through as it is: the SDK holds this button busy, with
+          the light round it, until the login ends. */}
+      <button type="button" onClick={login}>
+        <ZorealMark size={22} brand />
+        Continue with ZOREAL
+      </button>
 
       {note && <p role="status">{note}</p>}
     </div>
