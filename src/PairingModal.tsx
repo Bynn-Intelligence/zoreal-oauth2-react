@@ -2,8 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ZorealLockup } from './lockup';
 import { interpolate, isRtl, strings } from './i18n';
+import { titleFor } from './intent';
 import { cx, ensureStyles } from './styles';
-import type { PairingState, ZorealTheme } from './types';
+import type { LoginIntent, PairingState, ZorealTheme } from './types';
 
 /**
  * The pairing modal, rendered by the SDK rather than by every integrator.
@@ -58,6 +59,8 @@ export interface PairingModalProps {
   locale?: string;
   theme?: ZorealTheme;
   timeoutMs?: number;
+  /** Which title the dialog opens with. Defaults to the sign-in wording. */
+  intent?: LoginIntent;
 }
 
 export function PairingModal({
@@ -67,6 +70,7 @@ export function PairingModal({
   locale,
   theme = 'auto',
   timeoutMs = DEFAULT_PAIRING_TIMEOUT_MS,
+  intent = 'sign-in',
 }: PairingModalProps) {
   const t = strings(locale);
   const titleId = useId();
@@ -187,7 +191,7 @@ export function PairingModal({
           <ZorealLockup height={44} className={cx('lockup')} />
 
           <h2 id={titleId} className={cx('title')}>
-            {settled ? t.titleApprove : t.title}
+            {settled ? t.titleApprove : titleFor(t, intent)}
           </h2>
           <p className={cx('body-text')}>{body}</p>
 

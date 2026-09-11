@@ -1,4 +1,6 @@
 import { useMemo, type CSSProperties } from 'react';
+import { useZorealOAuth } from './context';
+import { strings } from './i18n';
 import { useZorealFlow } from './useZorealLogin';
 import { ZorealMark } from './mark';
 import type {
@@ -24,8 +26,10 @@ import type {
  * once. Opt out with `pairingUI="none"` on the provider.
  */
 
-const TEXTS: Record<NonNullable<ZorealLoginProps['text']>, string> = {
-  continue_with: 'Continue with ZOREAL',
+// The default label is translated with the modal's own copy; the four
+// alternatives are English, as they were.
+const TEXTS: Record<NonNullable<ZorealLoginProps['text']>, string | null> = {
+  continue_with: null,
   signin_with: 'Sign in with ZOREAL',
   signup_with: 'Sign up with ZOREAL',
   signin: 'Sign in',
@@ -54,6 +58,9 @@ export function ZorealLogin(props: ZorealLoginProps) {
     flow = 'browser-direct',
     ...request
   } = props;
+
+  const { locale } = useZorealOAuth();
+  const label = TEXTS[text] ?? strings(locale).buttonContinue;
 
   const { login } = useZorealFlow({
     ...request,
@@ -103,7 +110,7 @@ export function ZorealLogin(props: ZorealLoginProps) {
         }}
       >
         <ZorealMark size={Math.round(s.font * 1.25)} />
-        {type === 'standard' && TEXTS[text]}
+        {type === 'standard' && label}
       </button>
     </div>
   );

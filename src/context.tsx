@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { DEFAULT_ISSUER } from './wire';
 import { PairingModal } from './PairingModal';
-import type { PairingState, PairingUI, ZorealTheme } from './types';
+import type { LoginIntent, PairingState, PairingUI, ZorealTheme } from './types';
 
 export interface ZorealOAuthProviderProps {
   /** From the ZOREAL dashboard: the asset ID. */
@@ -39,6 +39,7 @@ export interface ZorealOAuthContextProps {
 export interface HostedPairing {
   state: PairingState;
   qrUrl: string;
+  intent: LoginIntent;
   cancel: () => void;
 }
 
@@ -87,6 +88,7 @@ export function ZorealOAuthProvider({
           <PairingModal
             state={pairing.state}
             qrUrl={pairing.qrUrl}
+            intent={pairing.intent}
             onCancel={pairing.cancel}
             locale={locale}
             theme={theme}

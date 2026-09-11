@@ -9,8 +9,10 @@ export { useZorealLogin } from './useZorealLogin';
 export { useZorealAutoLogin } from './useZorealAutoLogin';
 export { zorealLogout } from './logout';
 export { hasGrantedAllScopesZoreal, hasGrantedAnyScopeZoreal } from './scopes';
+export { resolveIntent } from './intent';
 export type {
   AcrValue,
+  LoginIntent,
   PairingUI,
   ZorealTheme,
   AuthCodeFlowOptions,

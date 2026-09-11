@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useZorealOAuth, useZorealPairingHost } from './context';
+import { resolveIntent } from './intent';
 import { unsafeClaims } from './jwt';
 import {
   FlowAbandonedError,
@@ -111,6 +112,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
       // and showing another.
       const display = resolveDisplay(opts.display);
       const useAppLink = display === 'link';
+      const intent = resolveIntent(opts.intent, opts.scope, opts.acr_values);
 
       try {
         const started = await startPairing(issuer, {
@@ -154,6 +156,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
           const surface = {
             pairUrl: started.pair_url,
             appLink: useAppLink,
+            intent,
             cancel,
             // The app link has no QR and therefore no cadence to report.
             ...(useAppLink ? null : { qrRefreshSeconds }),
@@ -172,7 +175,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
           };
           setPairing(active);
           if (!useAppLink) {
-            publishRef.current?.({ state: active.state, qrUrl, cancel });
+            publishRef.current?.({ state: active.state, qrUrl, intent, cancel });
           }
           // The initial state, immediately: the first poll response is one
           // round-trip away, and a UI that waits for it opens visibly empty.
@@ -199,7 +202,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
                 p && p.requestId === started.request_id ? { ...p, qrUrl, state: enriched } : p
               );
               if (!useAppLink) {
-                publishRef.current?.({ state: enriched, qrUrl, cancel });
+                publishRef.current?.({ state: enriched, qrUrl, intent, cancel });
               }
               opts.onPairingStateChange?.(enriched);
             },
