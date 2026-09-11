@@ -1,6 +1,6 @@
 {
   "name": "@zoreal/oauth2-react",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "Login with ZOREAL for React. A ZOREAL Verified Proof-of-Human behind every sign-in.",
   "license": "MIT",
   "repository": {
