@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ZorealLockup } from './lockup';
+import { ZorealMark } from './mark';
 import { interpolate, isRtl, strings } from './i18n';
 import { titleFor } from './intent';
 import { cx, ensureStyles } from './styles';
@@ -86,6 +87,12 @@ export function PairingModal({
   // a first-time holder finishing ZOREAL ID setup. In both the QR has done its
   // job and the action has moved to the phone.
   const settled = state.status === 'claimed' || state.status === 'enrolling';
+  // Same device: the link opens the app on this phone, so the dialog offers
+  // a link to tap instead of a code to scan. It opens before the sign-in
+  // exists, carrying the light while it is created, and the control gets its
+  // address on the first state that has one.
+  const linkMode = state.appLink === true;
+  const ready = linkMode && Boolean(state.pairUrl);
 
   // The code on screen is a frame of a rotating sequence, so `qrUrl` arrives
   // again every few seconds with a different value. Swapping an <img> src
@@ -100,7 +107,7 @@ export function PairingModal({
   useEffect(() => {
     // Once the phone has claimed the code the sequence is over and the well
     // keeps the spent frame under its overlay.
-    if (settled || frameUrl === qrUrl) return;
+    if (linkMode || settled || frameUrl === qrUrl) return;
     let abandoned = false;
     const next = new Image();
     next.onload = () => {
@@ -115,7 +122,7 @@ export function PairingModal({
       next.onload = null;
       next.onerror = null;
     };
-  }, [qrUrl, settled, frameUrl]);
+  }, [qrUrl, settled, frameUrl, linkMode]);
 
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
@@ -171,7 +178,9 @@ export function PairingModal({
       ? t.bodyEnrolling
       : settled
         ? t.bodyApprove
-        : t.bodyScan;
+        : linkMode
+          ? t.bodyLink
+          : t.bodyScan;
 
   return createPortal(
     <div className={`${cx('root')} ${cx('scrim')}`} data-theme={theme} onClick={onCancel}>
@@ -200,28 +209,57 @@ export function PairingModal({
               above them. The well carries the spent flag for them: a
               stylesheet cannot look back from the image to a sibling before
               it. */}
-          <div className={cx('qr-well')} data-spent={settled}>
-            <span className={cx('qr-beam-glow')} aria-hidden>
-              <span className={cx('qr-beam-glow-band')} />
-            </span>
-            <span className={cx('qr-beam')} aria-hidden />
-            <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
-            {settled && (
-              <span className={cx('qr-overlay')}>
-                <span className={cx('qr-badge')}>
-                  <IconPhone />
+          {linkMode ? (
+            <>
+              <div className={cx('link-well')} data-ready={ready}>
+                <span className={cx('qr-beam-glow')} aria-hidden>
+                  <span className={cx('qr-beam-glow-band')} />
                 </span>
+                <span className={cx('qr-beam')} aria-hidden />
+                <ZorealMark size={48} />
+              </div>
+              {/* An anchor with no href is neither focusable nor clickable,
+                  which is the disabled state; the href arrives with the
+                  pairing. A new tab, so the tab that is polling for the
+                  approval is left where it is; with no app on the phone the
+                  same address is the page that installs it. */}
+              <a
+                className={cx('open')}
+                href={ready ? state.pairUrl : undefined}
+                target="_blank"
+                rel="noopener"
+                aria-disabled={ready ? undefined : true}
+              >
+                {t.openApp}
+              </a>
+            </>
+          ) : (
+            <div className={cx('qr-well')} data-spent={settled}>
+              <span className={cx('qr-beam-glow')} aria-hidden>
+                <span className={cx('qr-beam-glow-band')} />
               </span>
-            )}
-          </div>
+              <span className={cx('qr-beam')} aria-hidden />
+              <img className={cx('qr')} data-spent={settled} src={frameUrl} alt={t.qrAlt} width={180} height={180} />
+              {settled && (
+                <span className={cx('qr-overlay')}>
+                  <span className={cx('qr-badge')}>
+                    <IconPhone />
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
 
-          <div className={cx('status')}>
-            <span className={cx('dot')}>
-              <i />
-              <i />
-            </span>
-            {settled ? t.waitingApproval : t.waiting}
-          </div>
+          {/* Same device: nothing is being waited for until the app has the request. */}
+          {(!linkMode || settled) && (
+            <div className={cx('status')}>
+              <span className={cx('dot')}>
+                <i />
+                <i />
+              </span>
+              {settled ? t.waitingApproval : t.waiting}
+            </div>
+          )}
           <p className={cx('timer')} data-urgent={remaining <= URGENT_SECONDS}>
             {interpolate(t.expiresIn, mmss(remaining))}
           </p>
@@ -232,10 +270,12 @@ export function PairingModal({
             panel reads as "scan this with something I do not have", and the
             flow dead-ends at the one moment it can still be recovered: the
             same code is also the app's download link. */}
-        <div className={cx('help')}>
-          <p className={cx('help-title')}>{t.noIdTitle}</p>
-          <p className={cx('help-body')}>{t.noIdBody}</p>
-        </div>
+        {!linkMode && (
+          <div className={cx('help')}>
+            <p className={cx('help-title')}>{t.noIdTitle}</p>
+            <p className={cx('help-body')}>{t.noIdBody}</p>
+          </div>
+        )}
 
         <div className={cx('footer')}>
           <button type="button" className={cx('cancel')} onClick={onCancel}>

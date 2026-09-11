@@ -229,7 +229,7 @@ What the modal does:
 
 | | |
 | --- | --- |
-| **Mobile** | No QR. The SDK opens the pairing link, which the ZOREAL ID app claims; the modal never appears. Force one or the other with `display: 'qr'` / `'link'`. |
+| **Mobile** | No QR. The modal opens on the tap with the light running while the pairing is created, then offers an **Open ZOREAL ID** button: a real link, because a browser hands a link to an app only from a tap, never from a script. It opens in a new tab so the polling tab stays put; with no app installed the same link is the page that installs it. Force one or the other with `display: 'qr'` / `'link'`. |
 | **Live status** | The copy and the title follow the pairing: waiting for a scan, then waiting for approval once the holder has claimed the code (the spent QR blurs out behind a phone glyph). |
 | **Title** | Says what the scan is for, inferred from the request: "Scan to sign in" for `openid`, `email` and `profile.name`; "Scan to verify your identity" once a document attribute such as `zoreal.age` or `profile.birthdate` is requested; "Scan to prove you are a real human" for `openid` alone with `acr_values: 'zoreal.live'`. Override with `intent`, one of `'sign-in'`, `'identify'`, `'presence'`, when the scope does not say. |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |

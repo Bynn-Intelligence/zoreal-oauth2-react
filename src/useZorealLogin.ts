@@ -115,6 +115,22 @@ export function useZorealFlow(options: InternalFlowOptions): {
       const intent = resolveIntent(opts.intent, opts.scope, opts.acr_values);
 
       try {
+        // Same device: the dialog opens on the tap, before the provider has
+        // answered, so the light runs while the sign-in is created and the
+        // person is never looking at nothing.
+        if (useAppLink) {
+          const cancel = () => {
+            controller.abort();
+            publishRef.current?.(null);
+          };
+          publishRef.current?.({
+            state: { status: 'pending', appLink: true, intent, cancel },
+            qrUrl: '',
+            intent,
+            cancel,
+          });
+        }
+
         const started = await startPairing(issuer, {
           client_id: clientId,
           scope: opts.scope ?? 'openid',
@@ -174,21 +190,17 @@ export function useZorealFlow(options: InternalFlowOptions): {
             cancel,
           };
           setPairing(active);
-          if (!useAppLink) {
-            publishRef.current?.({ state: active.state, qrUrl, intent, cancel });
-          }
+          publishRef.current?.({ state: active.state, qrUrl, intent, cancel });
           // The initial state, immediately: the first poll response is one
           // round-trip away, and a UI that waits for it opens visibly empty.
           opts.onPairingStateChange?.(active.state);
 
-          if (useAppLink) {
-            // The universal link, in the same tab: the app claims it, and with
-            // no app installed the same URL is the real pairing page which can
-            // enrol. A popup here would be blocked more often than it would
-            // help. The URL carries the start token that binds the claim to
-            // this browser, so it is used exactly as the provider gave it.
-            window.location.assign(started.pair_url);
-          }
+          // The same-device link is never navigated to from here. A browser
+          // hands a link to an app only from a tap, not from a script running
+          // after a network round trip, so a navigation here lands on the web
+          // page instead and takes the polling tab with it. The dialog's
+          // control is that tap; a caller rendering their own UI gets pairUrl
+          // on every state for the same purpose.
 
           code = await pollUntilApproved(
             issuer,
@@ -201,9 +213,7 @@ export function useZorealFlow(options: InternalFlowOptions): {
               setPairing((p) =>
                 p && p.requestId === started.request_id ? { ...p, qrUrl, state: enriched } : p
               );
-              if (!useAppLink) {
-                publishRef.current?.({ state: enriched, qrUrl, intent, cancel });
-              }
+              publishRef.current?.({ state: enriched, qrUrl, intent, cancel });
               opts.onPairingStateChange?.(enriched);
             },
             controller.signal,
