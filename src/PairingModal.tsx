@@ -16,8 +16,12 @@ import type { LoginIntent, PairingState, ZorealTheme } from './types';
  * need to look at their phone.
  */
 
-/** Our own cap on how long a pairing sits on screen. See `pairingTimeoutMs`. */
-export const DEFAULT_PAIRING_TIMEOUT_MS = 120_000;
+/**
+ * How long a pairing sits on screen when the provider states no expiry of
+ * its own. The provider does state one (`expires_in`, five minutes today),
+ * and that is the deadline unless the site sets a shorter `pairingTimeoutMs`.
+ */
+export const DEFAULT_PAIRING_TIMEOUT_MS = 300_000;
 
 /** Below this the countdown changes colour: it stops being background
  *  information and starts being a prompt to hurry. */
@@ -69,7 +73,7 @@ export function PairingModal({
   onCancel,
   locale,
   theme = 'auto',
-  timeoutMs = DEFAULT_PAIRING_TIMEOUT_MS,
+  timeoutMs,
   intent = 'sign-in',
 }: PairingModalProps) {
   const t = strings(locale);
@@ -80,7 +84,7 @@ export function PairingModal({
   // a counter that subtracts one per tick drifts and comes back lying about how
   // much time is left; reading the clock each tick self-corrects.
   const deadlineRef = useRef(0);
-  const [remaining, setRemaining] = useState(Math.round(timeoutMs / 1000));
+  const [remaining, setRemaining] = useState(Math.round((timeoutMs ?? DEFAULT_PAIRING_TIMEOUT_MS) / 1000));
 
   // `claimed` = the request is now waiting in the holder's app; `enrolling` =
   // a first-time holder finishing ZOREAL ID setup. In both the QR has done its
@@ -125,11 +129,13 @@ export function PairingModal({
   }, []);
 
   useEffect(() => {
-    // Never claim more time than the provider will actually honour: if the
-    // server's own window is shorter than our cap, the server wins.
+    // The provider's own window is the deadline; a site's `pairingTimeoutMs`
+    // can only shorten it, never claim more time than the provider honours.
     const serverMs = typeof state.expiresIn === 'number' ? state.expiresIn * 1000 : Infinity;
-    deadlineRef.current = Date.now() + Math.min(timeoutMs, serverMs);
-    setRemaining(Math.round(Math.min(timeoutMs, serverMs) / 1000));
+    const capMs = timeoutMs ?? (Number.isFinite(serverMs) ? serverMs : DEFAULT_PAIRING_TIMEOUT_MS);
+    const ms = Math.min(capMs, serverMs);
+    deadlineRef.current = Date.now() + ms;
+    setRemaining(Math.round(ms / 1000));
 
     const id = setInterval(() => {
       const left = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
